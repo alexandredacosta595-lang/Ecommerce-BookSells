@@ -1,0 +1,6 @@
+{
+  "name": "Livraria Mulemba",
+  "description": "A maior rede literária de Angola, conectando leitores, sebos de usados, livrarias de bairro, editoras parceiras e autores independentes com suporte a Kwanza.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

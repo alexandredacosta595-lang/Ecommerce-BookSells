@@ -1,0 +1,631 @@
+import React, { useState } from 'react';
+import { useBookStore } from '../store/useBookStore';
+import { useNotificationStore } from '../store/useNotificationStore';
+import RatingComponent from '../components/RatingComponent';
+import { Book } from '../types';
+import {
+  Settings,
+  TrendingUp,
+  BookOpen,
+  DollarSign,
+  Package,
+  Users,
+  Plus,
+  Edit2,
+  Trash2,
+  CheckCircle,
+  Truck,
+  RotateCcw,
+  Search,
+  PlusCircle,
+  BarChart,
+  Grid,
+} from 'lucide-react';
+import ModalComponent from '../components/ModalComponent';
+
+export default function AdminDashboard() {
+  const {
+    books,
+    orders,
+    categories,
+    authors,
+    addBook,
+    updateBook,
+    deleteBook,
+    updateOrderStatus,
+  } = useBookStore();
+
+  const showToast = useNotificationStore();
+
+  const [activeTab, setActiveTab] = useState<'analytics' | 'books' | 'orders' | 'customers'>('analytics');
+  
+  // Search state inside admin tables
+  const [bookSearch, setBookSearch] = useState('');
+  const [orderSearch, setOrderSearch] = useState('');
+
+  // Books CRUD Form States
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingBook, setEditingBook] = useState<Book | null>(null);
+
+  // Form Fields
+  const [formTitle, setFormTitle] = useState('');
+  const [formDescription, setFormDescription] = useState('');
+  const [formPrice, setFormPrice] = useState(19.99);
+  const [formCategoryId, setFormCategoryId] = useState('cat-1');
+  const [formAuthorId, setFormAuthorId] = useState('aut-1');
+  const [formPages, setFormPages] = useState(300);
+  const [formStock, setFormStock] = useState(50);
+  const [formType, setFormType] = useState<'physical' | 'digital' | 'both'>('both');
+  const [formIsbn, setFormIsbn] = useState('978-3-16-148410-0');
+  const [formPublisher, setFormPublisher] = useState('Editora Mulemba');
+
+  const handleOpenAddModal = () => {
+    setEditingBook(null);
+    setFormTitle('');
+    setFormDescription('');
+    setFormPrice(19.99);
+    setFormCategoryId('cat-1');
+    setFormAuthorId('aut-1');
+    setFormPages(300);
+    setFormStock(50);
+    setFormType('both');
+    setFormIsbn('978-3-16-148410-0');
+    setFormPublisher('Editora Mulemba');
+    setIsAddModalOpen(true);
+  };
+
+  const handleOpenEditModal = (book: Book) => {
+    setEditingBook(book);
+    setFormTitle(book.title);
+    setFormDescription(book.description);
+    setFormPrice(book.price);
+    setFormCategoryId(book.categoryId);
+    setFormAuthorId(book.authorId);
+    setFormPages(book.pages);
+    setFormStock(book.stock);
+    setFormType(book.type);
+    setFormIsbn(book.isbn || '978-3-16-148410-0');
+    setFormPublisher(book.publisher || 'Editora Mulemba');
+    setIsAddModalOpen(true);
+  };
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formTitle.trim() || !formDescription.trim()) {
+      showToast.showToast('Por favor, preencha o título e as descrições de sinopse necessárias.', 'warning');
+      return;
+    }
+
+    const newBookData = {
+      title: formTitle,
+      description: formDescription,
+      price: formPrice,
+      categoryId: formCategoryId,
+      authorId: formAuthorId,
+      coverColor: 'from-blue-600 to-indigo-805', // Simple default aesthetic cover
+      coverImage: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=450&auto=format&fit=crop&q=80',
+      type: formType,
+      formats: formType === 'both' ? ['physical', 'pdf', 'epub'] : formType === 'physical' ? ['physical'] : ['pdf', 'epub'],
+      stock: formType === 'digital' ? 999 : formStock,
+      pages: formPages,
+      publishedDate: new Date().toISOString().split('T')[0],
+      isbn: formIsbn,
+      publisher: formPublisher,
+    } as any;
+
+    if (editingBook) {
+      updateBook(editingBook.id, newBookData);
+      showToast.showToast(`Valores do catálogo de "${formTitle}" atualizados com sucesso!`, 'success');
+    } else {
+      addBook(newBookData);
+      showToast.showToast(`Nova publicação "${formTitle}" cadastrada em nosso catálogo!`, 'success');
+    }
+    
+    setIsAddModalOpen(false);
+  };
+
+  const handleDeleteBook = (id: string, title: string) => {
+    if (confirm(`Tem certeza absoluta de que deseja excluir "${title}"?`)) {
+      deleteBook(id);
+      showToast.showToast(`"${title}" foi removido do catálogo com sucesso.`, 'info');
+    }
+  };
+
+  // Filter lists inside admin pages
+  const bookList = books.filter((b) =>
+    b.title.toLowerCase().includes(bookSearch.toLowerCase()) ||
+    (b.isbn && b.isbn.includes(bookSearch))
+  );
+
+  const orderList = orders.filter((o) =>
+    o.id.toLowerCase().includes(orderSearch.toLowerCase()) ||
+    o.shippingAddress.fullName.toLowerCase().includes(orderSearch.toLowerCase())
+  );
+
+  // Calculations for Analytics dashboard
+  const statsRevenue = orders.reduce((sum, o) => sum + (o.status !== 'cancelled' ? o.total : 0), 0);
+  const statsSoldItemsCount = orders.reduce((sum, o) => sum + (o.status !== 'cancelled' ? o.items.length : 0), 0);
+  const statsLowStockBooks = books.filter((b) => b.stock < 10).length;
+
+  return (
+    <div className="py-6 md:py-10 space-y-8" id="bookverse-admin-panel">
+      
+      {/* HEADER ROW */}
+      <div className="border-b border-zinc-150 dark:border-zinc-805 pb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <span className="text-xs font-extrabold uppercase tracking-widest text-emerald-600 dark:text-emerald-450 font-mono">Console de Operações</span>
+          <h1 className="text-3xl font-bold text-zinc-909 dark:text-zinc-50 mt-1">Painel Geral do Administrador</h1>
+          <p className="text-sm text-zinc-505 mt-1">Gerencie estoques físicos de livrarias, controle o envio de pedidos e monitore as estatísticas financeiras.</p>
+        </div>
+        
+        <button
+          onClick={handleOpenAddModal}
+          className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-650 hover:bg-emerald-750 text-white font-bold text-xs px-5 py-3 cursor-pointer shadow-sm"
+        >
+          <PlusCircle className="h-4.5 w-4.5" /> Cadastrar Novo Livro
+        </button>
+      </div>
+
+      {/* CORE ADMINISTRATIVE TABS */}
+      <div className="flex flex-wrap gap-2 border-b">
+        {[
+          { id: 'analytics', label: 'Painel & Métricas', icon: BarChart },
+          { id: 'books', label: 'Estoque de Livros', icon: BookOpen },
+          { id: 'orders', label: 'Controle de Envios', icon: Package },
+          { id: 'customers', label: 'Contas Cadastradas', icon: Users },
+        ].map((tab) => {
+          const TabIcon = tab.icon;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={`flex items-center gap-1.5 px-4 py-3 text-xs font-bold uppercase tracking-wider border-b-2 transition select-none ${
+                activeTab === tab.id
+                  ? 'border-emerald-550 bg-emerald-550/10 text-emerald-600 dark:text-emerald-410 font-bold'
+                  : 'border-transparent text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:border-zinc-200'
+              }`}
+            >
+              <TabIcon className="h-4 w-4" /> {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* RENDER ACTIVE MENU */}
+      <div className="py-1 animate-fade-in" id="admin-panel-tabs-manifest">
+        
+        {/* TAB 1: ANALYTICS OVERVIEW */}
+        {activeTab === 'analytics' && (
+          <div className="space-y-8">
+            {/* STATS COUNT BENTO GRID */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-2xl border p-5 bg-white dark:bg-zinc-905 dark:border-zinc-800 flex items-center gap-4 shadow-sm">
+                <div className="rounded-xl bg-emerald-50 text-emerald-600 p-3 dark:bg-emerald-950/20">
+                  <DollarSign className="h-6 w-6" />
+                </div>
+                <div>
+                  <span className="text-[10px] text-zinc-400 uppercase tracking-widest font-bold font-mono">Faturamento Bruto</span>
+                  <p className="text-xl font-black text-zinc-900 dark:text-zinc-50 mt-0.5 font-mono">Kz {statsRevenue.toLocaleString('pt-AO')}</p>
+                </div>
+              </div>
+ 
+              <div className="rounded-2xl border p-5 bg-white dark:bg-zinc-905 dark:border-zinc-800 flex items-center gap-4 shadow-sm">
+                <div className="rounded-xl bg-blue-50 text-blue-600 p-3 dark:bg-blue-955/20">
+                  <Package className="h-6 w-6" />
+                </div>
+                <div>
+                  <span className="text-[10px] text-zinc-404 uppercase tracking-widest font-bold font-mono">Obras Vendidas</span>
+                  <p className="text-xl font-black text-zinc-900 dark:text-zinc-50 mt-0.5 font-mono">{statsSoldItemsCount} unidades</p>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border p-5 bg-white dark:bg-zinc-905 dark:border-zinc-800 flex items-center gap-4 shadow-sm">
+                <div className="rounded-xl bg-amber-50 text-amber-550 p-3 dark:bg-amber-955/20">
+                  <Package className="h-6 w-6" />
+                </div>
+                <div>
+                  <span className="text-[10px] text-zinc-404 uppercase tracking-widest font-bold font-mono">Alertas de Estoque</span>
+                  <p className="text-xl font-black text-zinc-900 dark:text-zinc-50 mt-0.5 font-mono">{statsLowStockBooks} livros</p>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border p-5 bg-white dark:bg-zinc-909 dark:border-zinc-800 flex items-center gap-4 shadow-sm">
+                <div className="rounded-xl bg-purple-50 text-purple-600 p-3 dark:bg-purple-955/20">
+                  <BookOpen className="h-6 w-6" />
+                </div>
+                <div>
+                  <span className="text-[10px] text-zinc-404 uppercase tracking-widest font-bold font-mono">Total no Catálogo</span>
+                  <p className="text-xl font-black text-zinc-900 dark:text-zinc-50 mt-0.5 font-mono">{books.length} títulos</p>
+                </div>
+              </div>
+            </div>
+
+            {/* BAR GRAPHS AND CHART PROGRESS */}
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+              <div className="rounded-2xl border p-6 bg-white dark:bg-zinc-900 dark:border-zinc-805 space-y-4">
+                <h3 className="text-sm font-bold text-zinc-909 dark:text-zinc-50 flex items-center gap-2">
+                  <TrendingUp className="h-4.5 w-4.5 text-emerald-500" /> Distribuição de Obras por Categoria
+                </h3>
+                <div className="space-y-4">
+                  {categories.map((cat) => {
+                    const ratio = Math.round((cat.booksCount / books.length) * 100) || 10;
+                    return (
+                      <div key={cat.id} className="space-y-1 text-xs">
+                        <div className="flex justify-between font-semibold">
+                          <span>{cat.name}</span>
+                          <span className="font-mono text-zinc-405">{cat.booksCount} livros ({ratio}%)</span>
+                        </div>
+                        <div className="w-full bg-zinc-100 h-2 rounded-full dark:bg-zinc-800 overflow-hidden">
+                          <div className="bg-emerald-550 h-full rounded-full" style={{ width: `${ratio}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Inventories stock check */}
+              <div className="rounded-2xl border p-6 bg-white dark:bg-zinc-900 dark:border-zinc-805 space-y-4">
+                <h3 className="text-sm font-bold text-zinc-909 dark:text-zinc-50 flex items-center gap-2">
+                  <Settings className="h-4.5 w-4.5 text-blue-500" /> Livros com Estoque Baixo
+                </h3>
+                
+                <div className="space-y-3 max-h-56 overflow-y-auto">
+                  {books.filter((b) => b.type !== 'digital').slice(0, 5).map((b) => (
+                    <div key={b.id} className="flex justify-between items-center text-xs border-b pb-2 last:border-0 dark:border-zinc-800">
+                      <div>
+                        <span className="font-semibold text-zinc-850 dark:text-zinc-100 block">{b.title}</span>
+                        <span className="text-[10px] text-zinc-404 font-mono uppercase block mt-0.5">Estoque Físico: resta apenas {b.stock} unidades</span>
+                      </div>
+                      <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold font-mono tracking-wider text-center uppercase ${
+                        b.stock < 10 ? 'bg-rose-50 border border-rose-200 text-rose-600 dark:bg-rose-950/20 dark:text-rose-400' : 'bg-zinc-100 text-zinc-500'
+                      }`}>
+                        {b.stock < 10 ? 'Reposição Crítica' : 'Adequado'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+          </div>
+        )}
+
+        {/* TAB 2: BOOKS INVENTORY TAB TABLE OVERVIEW */}
+        {activeTab === 'books' && (
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="relative flex items-center max-w-sm w-full">
+                <input
+                  type="text"
+                  value={bookSearch}
+                  onChange={(e) => setBookSearch(e.target.value)}
+                  placeholder="Buscar livros, código ISBN..."
+                  className="w-full rounded-xl border border-zinc-250 bg-white px-3.5 py-2 pl-9 text-xs outline-none focus:border-blue-600 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
+                />
+                <Search className="absolute left-3 h-4 w-4 text-zinc-400" />
+              </div>
+              
+              <button
+                onClick={handleOpenAddModal}
+                className="rounded-xl border border-dashed border-zinc-300 py-2.5 px-4 text-xs font-bold text-zinc-700 hover:bg-zinc-50 inline-flex items-center gap-1 cursor-pointer dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-350"
+              >
+                <Plus className="h-4 w-4 text-emerald-555" /> Conectar novos títulos literários
+              </button>
+            </div>
+
+            {/* List Table items */}
+            <div className="overflow-x-auto rounded-2xl border border-zinc-150 bg-white dark:bg-zinc-900 dark:border-zinc-801 shadow-sm">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-zinc-50/70 border-b border-zinc-200 uppercase tracking-widest text-[9px] font-mono font-bold text-zinc-400 dark:bg-zinc-950/20 dark:border-zinc-800">
+                    <th className="px-5 py-3">Especificações do Livro</th>
+                    <th className="px-5 py-3">Formato / Edição</th>
+                    <th className="px-5 py-3 font-mono">Preço</th>
+                    <th className="px-5 py-3 font-mono">Em Estoque</th>
+                    <th className="px-5 py-3 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-805">
+                  {bookList.map((b) => (
+                    <tr key={b.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-850/20">
+                      <td className="px-5 py-3.5 flex items-center gap-3">
+                        <div className={`h-11 w-8 rounded bg-gradient-to-br ${b.coverColor} flex-shrink-0 relative overflow-hidden flex items-center justify-center text-white font-serif font-bold text-[6px] shadow-sm`}>
+                          <div className="absolute top-0 bottom-0 left-0 w-0.5 bg-black/10" />
+                          BOV
+                        </div>
+                        <div className="overflow-hidden">
+                          <span className="font-bold text-zinc-850 dark:text-zinc-50 block leading-tight truncate max-w-xs">{b.title}</span>
+                          <span className="text-[10px] text-zinc-440 block font-mono mt-0.5">ISBN: {b.isbn || 'N/A'}</span>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <span className="rounded bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-300 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider font-mono">
+                          {b.type === 'both' ? 'Físico + Digital' : b.type === 'physical' ? 'Físico' : 'Digital'}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 font-bold font-mono text-zinc-900 dark:text-zinc-105">Kz {b.price.toLocaleString('pt-AO')}</td>
+                      <td className="px-5 py-3.5">
+                        <span className={`font-mono font-bold ${b.stock < 10 ? 'text-rose-500' : 'text-zinc-650 dark:text-zinc-400'}`}>
+                          {b.type === 'digital' ? 'Infinito (Digital)' : b.stock}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 text-right space-x-1.5 flex justify-end items-center h-full">
+                        <button
+                          onClick={() => handleOpenEditModal(b)}
+                          className="p-1.5 rounded-lg border hover:bg-zinc-100 text-zinc-500 active:scale-95 dark:border-zinc-800"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteBook(b.id, b.title)}
+                          className="p-1.5 rounded-lg border hover:bg-rose-50 text-rose-550 active:scale-95 dark:border-zinc-800"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: ORDERS DISPATCH MANAGEMENT */}
+        {activeTab === 'orders' && (
+          <div className="space-y-4">
+            <div className="relative flex items-center max-w-sm w-full">
+              <input
+                type="text"
+                value={orderSearch}
+                onChange={(e) => setOrderSearch(e.target.value)}
+                placeholder="Buscar pedidos por código ou nome..."
+                className="w-full rounded-xl border border-zinc-250 bg-white px-3.5 py-2 pl-9 text-xs outline-none focus:border-blue-600 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
+              />
+              <Search className="absolute left-3 h-4 w-4 text-zinc-400" />
+            </div>
+
+            <div className="overflow-x-auto rounded-2xl border border-zinc-150 bg-white dark:bg-zinc-900 dark:border-zinc-805 shadow-sm">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-zinc-50/70 border-b border-zinc-200 uppercase tracking-widest text-[9px] font-mono font-bold text-zinc-400 dark:bg-zinc-950/20 dark:border-zinc-800">
+                    <th className="px-5 py-3 font-mono">Código do Pedido</th>
+                    <th className="px-5 py-3">Nome do Cliente</th>
+                    <th className="px-5 py-3">Obras Adquiridas</th>
+                    <th className="px-5 py-3 font-mono">Valor Bruto</th>
+                    <th className="px-5 py-3">Status de Envio</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                  {orderList.map((ord) => (
+                    <tr key={ord.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-850/20">
+                      <td className="px-5 py-3 text-sm font-black text-blue-650 dark:text-blue-400 font-mono">{ord.id}</td>
+                      <td className="px-5 py-3 font-semibold text-zinc-900 dark:text-zinc-105">{ord.shippingAddress.fullName}</td>
+                      <td className="px-5 py-3 max-w-xs truncate text-[11px] text-zinc-500">
+                        {ord.items.map((i) => `${i.title} (${i.quantity})`).join(', ')}
+                      </td>
+                      <td className="px-5 py-3 font-bold font-mono text-zinc-900 dark:text-zinc-101">Kz {ord.total.toLocaleString('pt-AO')}</td>
+                      <td className="px-5 py-3">
+                        <select
+                          value={ord.status}
+                          onChange={(e: any) => {
+                            updateOrderStatus(ord.id, e.target.value);
+                            showToast.showToast(`Status do pedido atualizado: ${ord.id}`, 'info');
+                          }}
+                          className="rounded-lg border px-2.5 py-1 text-xs font-semibold outline-none focus:border-emerald-600 bg-white dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 font-bold text-zinc-800"
+                        >
+                          <option value="pending">Pendente</option>
+                          <option value="processing">Processando</option>
+                          <option value="shipped">Enviado</option>
+                          <option value="delivered">Entregue</option>
+                          <option value="cancelled">Cancelado</option>
+                        </select>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: CUSTOMERS LOG PANEL */}
+        {activeTab === 'customers' && (
+          <div className="rounded-2xl border border-zinc-150 bg-white p-6 dark:bg-zinc-900 dark:border-zinc-805 space-y-4">
+            <h3 className="text-base font-bold text-zinc-909 dark:text-zinc-550 flex items-center gap-2">
+              <Users className="h-5 w-5 text-emerald-555" /> Histórico de Usuários Cadastrados
+            </h3>
+
+            <div className="space-y-3.5">
+              <div className="flex justify-between items-center text-xs p-3.5 rounded-xl border border-zinc-105 dark:border-zinc-800">
+                <div className="flex items-center gap-3">
+                  <img
+                    src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80"
+                    alt="client"
+                    className="h-8 w-8 rounded-full object-cover"
+                  />
+                  <div>
+                    <h5 className="font-bold text-zinc-905 dark:text-zinc-50">Alexandre Da Costa</h5>
+                    <span className="text-[10px] text-zinc-404 font-mono">alexandredacosta595@gmail.com</span>
+                  </div>
+                </div>
+                <span className="rounded bg-sky-50 text-sky-700 px-2.5 py-0.5 text-[9px] font-bold font-mono uppercase dark:bg-zinc-850 dark:text-sky-400 border border-sky-100">Leitor / Cliente</span>
+              </div>
+
+              <div className="flex justify-between items-center text-xs p-3.5 rounded-xl border border-zinc-105 dark:border-zinc-800">
+                <div className="flex items-center gap-3">
+                  <img
+                    src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80"
+                    alt="client"
+                    className="h-8 w-8 rounded-full object-cover"
+                  />
+                  <div>
+                    <h5 className="font-bold text-zinc-905 dark:text-zinc-50">Raymond Vance</h5>
+                    <span className="text-[10px] text-zinc-404 font-mono">vance@syntacticpress.com</span>
+                  </div>
+                </div>
+                <span className="rounded bg-emerald-50 text-emerald-700 px-2.5 py-0.5 text-[9px] font-bold font-mono uppercase dark:bg-zinc-850 dark:text-emerald-400 border border-emerald-100">Autor Independente</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+      </div>
+
+      {/* BOOKS ADD AND EDIT OVERLAY MODAL */}
+      <ModalComponent
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        title={editingBook ? `Editar Detalhes de: "${formTitle}"` : 'Cadastrar Nova Obra Literária'}
+        size="lg"
+      >
+        <form onSubmit={handleFormSubmit} className="grid grid-cols-1 gap-4 sm:grid-cols-2 text-xs">
+          <div className="sm:col-span-2">
+            <label className="text-zinc-405 font-bold font-mono uppercase block mb-1">Título do Livro *</label>
+            <input
+              type="text"
+              required
+              value={formTitle}
+              onChange={(e) => setFormTitle(e.target.value)}
+              placeholder="Ex: Arquitetura de Sistemas Cognitivos"
+              className="w-full rounded-xl border border-zinc-250 bg-white px-3 py-2.5 outline-none focus:border-emerald-600 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
+            />
+          </div>
+
+          <div className="sm:col-span-2">
+            <label className="text-zinc-405 font-bold font-mono uppercase block mb-1">Sinopse / Descrição da Obra *</label>
+            <textarea
+              required
+              rows={3}
+              value={formDescription}
+              onChange={(e) => setFormDescription(e.target.value)}
+              placeholder="Sinopse do autor, sumário, capítulos e temas centrais da obra..."
+              className="w-full rounded-xl border border-zinc-250 bg-white p-3 outline-none focus:border-emerald-605 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
+            />
+          </div>
+
+          <div>
+            <label className="text-zinc-405 font-bold font-mono uppercase block mb-1">Preço em Reais (R$) *</label>
+            <input
+              type="number"
+              step="0.01"
+              required
+              value={formPrice}
+              onChange={(e) => setFormPrice(parseFloat(e.target.value))}
+              placeholder="19.99"
+              className="w-full rounded-xl border border-zinc-250 bg-white px-3 py-2 text-xs outline-none focus:border-emerald-650 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-105"
+            />
+          </div>
+
+          <div>
+            <label className="text-zinc-405 font-bold font-mono uppercase block mb-1">Formatos Disponibilizados</label>
+            <select
+              value={formType}
+              onChange={(e: any) => setFormType(e.target.value)}
+              className="w-full rounded-xl border border-zinc-250 bg-white px-3 py-2 outline-none focus:border-emerald-600 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-105 font-bold text-zinc-800"
+            >
+              <option value="both">Ambos (Físico + Digital)</option>
+              <option value="physical">Apenas Físico</option>
+              <option value="digital">Apenas Digital (eBook)</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="text-zinc-405 font-bold font-mono uppercase block mb-1">Código da Categoria</label>
+            <select
+              value={formCategoryId}
+              onChange={(e) => setFormCategoryId(e.target.value)}
+              className="w-full rounded-xl border border-zinc-250 bg-white px-3 py-2 outline-none focus:border-emerald-600 dark:border-zinc-801 dark:bg-zinc-950 dark:text-zinc-105 font-bold text-zinc-800"
+            >
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="text-zinc-405 font-bold font-mono uppercase block mb-1">Escritor / Autor</label>
+            <select
+              value={formAuthorId}
+              onChange={(e) => setFormAuthorId(e.target.value)}
+              className="w-full rounded-xl border border-zinc-250 bg-white px-3 py-2 outline-none focus:border-emerald-600 dark:border-zinc-801 dark:bg-zinc-950 dark:text-zinc-105 font-bold text-zinc-800"
+            >
+              {authors.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="text-zinc-405 font-bold font-mono uppercase block mb-1">Número de Páginas</label>
+            <input
+              type="number"
+              required
+              value={formPages}
+              onChange={(e) => setFormPages(parseInt(e.target.value))}
+              placeholder="320"
+              className="w-full rounded-xl border border-zinc-250 bg-white px-3 py-2 outline-none focus:border-emerald-650 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-105"
+            />
+          </div>
+
+          <div>
+            <label className="text-zinc-405 font-bold font-mono uppercase block mb-1">Estoque do Livro Físico</label>
+            <input
+              type="number"
+              required
+              disabled={formType === 'digital'}
+              value={formType === 'digital' ? 999 : formStock}
+              onChange={(e) => setFormStock(parseInt(e.target.value))}
+              placeholder="50"
+              className="w-full rounded-xl border border-zinc-250 bg-white px-3 py-2 outline-none focus:border-emerald-650 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-105"
+            />
+          </div>
+
+          <div>
+            <label className="text-zinc-405 font-bold font-mono uppercase block mb-1">Código ISBN da Edição *</label>
+            <input
+              type="text"
+              required
+              value={formIsbn}
+              onChange={(e) => setFormIsbn(e.target.value)}
+              className="w-full rounded-xl border border-zinc-250 bg-white px-3 py-2.5 outline-none focus:border-emerald-605 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
+            />
+          </div>
+
+          <div>
+            <label className="text-zinc-405 font-bold font-mono uppercase block mb-1">Editora Responsável *</label>
+            <input
+              type="text"
+              required
+              value={formPublisher}
+              onChange={(e) => setFormPublisher(e.target.value)}
+              className="w-full rounded-xl border border-zinc-250 bg-white px-3 py-2.5 outline-none focus:border-emerald-605 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
+            />
+          </div>
+
+          <div className="sm:col-span-2 pt-4 border-t flex gap-3">
+            <button
+              type="button"
+              onClick={() => setIsAddModalOpen(false)}
+              className="flex-1 py-3 text-xs font-bold bg-zinc-100 rounded-xl hover:bg-zinc-200 cursor-pointer text-center text-zinc-705 dark:bg-zinc-800 dark:text-zinc-300"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="flex-1 py-3 text-xs font-bold rounded-xl bg-emerald-650 hover:bg-emerald-755 text-white shadow shadow-emerald-500/10 cursor-pointer"
+            >
+              {editingBook ? 'Salvar Alterações' : 'Publicar no Catálogo'}
+            </button>
+          </div>
+        </form>
+      </ModalComponent>
+
+    </div>
+  );
+}
