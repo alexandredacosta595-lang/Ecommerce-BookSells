@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import { Book, Category, Author, Review, Order, User } from '../types';
-import { mockBooks, mockCategories, mockAuthors, mockReviews } from '../utils/mockData';
+import { Book, Category, Author, Review, Order } from '../types';
+import { bookService, orderService } from '../services/bookService';
 
 interface LibraryItem {
   bookId: string;
@@ -15,11 +15,12 @@ interface BookState {
   categories: Category[];
   authors: Author[];
   reviews: Review[];
-  wishlist: string[]; // bookIds
+  wishlist: string[];
   library: LibraryItem[];
   orders: Order[];
+  isLoading: boolean;
+  isInitialized: boolean;
 
-  // Filter States
   searchQuery: string;
   selectedCategoryId: string;
   selectedAuthorId: string;
@@ -29,8 +30,12 @@ interface BookState {
   sortBy: 'featured' | 'price-low' | 'price-high' | 'rating' | 'newest';
   currentPage: number;
   itemsPerPage: number;
+  totalPages: number;
 
-  // Set Filters
+  initialize: () => Promise<void>;
+  fetchBooks: () => Promise<void>;
+  fetchAllBooks: () => Promise<void>;
+  fetchAdminOrders: () => Promise<void>;
   setSearchQuery: (query: string) => void;
   setSelectedCategoryId: (id: string) => void;
   setSelectedAuthorId: (id: string) => void;
@@ -41,256 +46,209 @@ interface BookState {
   setCurrentPage: (page: number) => void;
   resetFilters: () => void;
 
-  // Wishlist Actions
-  toggleWishlist: (bookId: string) => void;
+  toggleWishlist: (bookId: string) => Promise<void>;
   isInWishlist: (bookId: string) => boolean;
 
-  // Review Actions
-  addReview: (review: Omit<Review, 'id' | 'date'>) => void;
+  addReview: (review: Omit<Review, 'id' | 'date'>) => Promise<void>;
   getBookReviews: (bookId: string) => Review[];
+  loadReviews: (bookId: string) => Promise<void>;
 
-  // Library Actions
-  updateReadingProgress: (bookId: string, progress: number) => void;
-  downloadFormat: (bookId: string) => void;
-  addBooksToLibraryOnPurchase: (purchaseItems: { bookId: string; format: 'physical' | 'pdf' | 'epub' }[]) => void;
+  updateReadingProgress: (bookId: string, progress: number) => Promise<void>;
+  downloadFormat: (bookId: string) => Promise<void>;
 
-  // Order Actions
   placeOrder: (order: Order) => void;
-  updateOrderStatus: (orderId: string, status: Order['status']) => void;
+  createOrder: (payload: Parameters<typeof orderService.createOrder>[0]) => Promise<Order>;
+  updateOrderStatus: (orderId: string, status: Order['status']) => Promise<void>;
+  refreshOrders: () => Promise<void>;
 
-  // Admin Actions
-  addBook: (book: Omit<Book, 'id'>) => void;
-  updateBook: (id: string, updated: Partial<Book>) => void;
-  deleteBook: (id: string) => void;
+  addBook: (book: Omit<Book, 'id'>) => Promise<void>;
+  updateBook: (id: string, updated: Partial<Book>) => Promise<void>;
+  deleteBook: (id: string) => Promise<void>;
 }
 
-const INITIAL_LIBRARY: LibraryItem[] = [
-  { bookId: 'book-2', progress: 45, format: 'pdf', lastRead: '2026-06-02', downloaded: true },
-  { bookId: 'book-8', progress: 12, format: 'epub', lastRead: '2026-05-18', downloaded: false },
-  { bookId: 'book-13', progress: 85, format: 'epub', lastRead: '2026-06-03', downloaded: true },
-];
-
-const INITIAL_ORDERS: Order[] = [
-  {
-    id: 'ord-1001',
-    userId: 'usr-412',
-    date: '2026-05-15',
-    status: 'delivered',
-    subtotal: 37.95,
-    discount: 5.00,
-    shippingCharge: 4.99,
-    tax: 2.63,
-    total: 40.57,
-    paymentMethod: 'card',
-    shippingAddress: {
-      fullName: 'Alexandre Da Costa',
-      street: '124 Science Way, Apt 3B',
-      city: 'Boston',
-      state: 'MA',
-      zipCode: '02111',
-      country: 'USA',
-      phone: '+1 617-555-0199',
-    },
-    items: [
-      { bookId: 'book-4', title: 'Habits of Mind: Structural Routine', price: 19.95, quantity: 1, selectedFormat: 'physical' },
-      { bookId: 'book-13', title: 'Mindfulness & Neural Re-wiring', price: 18.00, quantity: 1, selectedFormat: 'epub' }
-    ],
-    trackingNumber: 'TRK-89210291-US',
-  },
-  {
-    id: 'ord-1002',
-    userId: 'usr-412',
-    date: '2026-06-02',
-    status: 'processing',
-    subtotal: 49.99,
-    discount: 0.00,
-    shippingCharge: 0.00,
-    tax: 4.00,
-    total: 53.99,
-    paymentMethod: 'card',
-    shippingAddress: {
-      fullName: 'Alexandre Da Costa',
-      street: '124 Science Way, Apt 3B',
-      city: 'Boston',
-      state: 'MA',
-      zipCode: '02111',
-      country: 'USA',
-      phone: '+1 617-555-0199',
-    },
-    items: [
-      { bookId: 'book-2', title: 'Cognitive Synapse: Algorithmic Logic', price: 49.99, quantity: 1, selectedFormat: 'pdf' }
-    ],
-  }
-];
-
 export const useBookStore = create<BookState>((set, get) => ({
-  books: mockBooks,
-  categories: mockCategories,
-  authors: mockAuthors,
-  reviews: mockReviews,
-  wishlist: ['book-1', 'book-4', 'book-11'],
-  library: INITIAL_LIBRARY,
-  orders: INITIAL_ORDERS,
+  books: [],
+  categories: [],
+  authors: [],
+  reviews: [],
+  wishlist: [],
+  library: [],
+  orders: [],
+  isLoading: false,
+  isInitialized: false,
 
-  // Filter Initial State
   searchQuery: '',
   selectedCategoryId: '',
   selectedAuthorId: '',
   selectedType: 'all',
-  priceRange: [0, 60],
+  priceRange: [0, 30000],
   minRating: 0,
   sortBy: 'featured',
   currentPage: 1,
   itemsPerPage: 12,
+  totalPages: 1,
 
-  setSearchQuery: (query) => set({ searchQuery: query, currentPage: 1 }),
-  setSelectedCategoryId: (id) => set({ selectedCategoryId: id, currentPage: 1 }),
-  setSelectedAuthorId: (id) => set({ selectedAuthorId: id, currentPage: 1 }),
-  setSelectedType: (type) => set({ selectedType: type, currentPage: 1 }),
-  setPriceRange: (range) => set({ priceRange: range, currentPage: 1 }),
-  setMinRating: (rating) => set({ minRating: rating, currentPage: 1 }),
-  setSortBy: (sort) => set({ sortBy: sort, currentPage: 1 }),
-  setCurrentPage: (page) => set({ currentPage: page }),
-  resetFilters: () => set({
-    searchQuery: '',
-    selectedCategoryId: '',
-    selectedAuthorId: '',
-    selectedType: 'all',
-    priceRange: [0, 60],
-    minRating: 0,
-    sortBy: 'featured',
-    currentPage: 1,
-  }),
+  initialize: async () => {
+    if (get().isInitialized) return;
+    set({ isLoading: true });
+    try {
+      const [categories, authors] = await Promise.all([
+        bookService.getCategories(),
+        bookService.getAuthors(),
+      ]);
+      set({ categories, authors, isInitialized: true });
+      await get().fetchBooks();
 
-  toggleWishlist: (bookId) => set((state) => {
-    const exists = state.wishlist.includes(bookId);
-    return {
-      wishlist: exists
-        ? state.wishlist.filter((id) => id !== bookId)
-        : [...state.wishlist, bookId],
-    };
-  }),
-
-  isInWishlist: (bookId) => {
-    return get().wishlist.includes(bookId);
+      const token = localStorage.getItem('token');
+      if (token) {
+        const [wishlist, library, orders] = await Promise.all([
+          bookService.getWishlist().catch(() => []),
+          bookService.getLibrary().catch(() => []),
+          orderService.getOrders().catch(() => []),
+        ]);
+        set({ wishlist, library, orders });
+      }
+    } finally {
+      set({ isLoading: false });
+    }
   },
 
-  addReview: (review) => set((state) => {
-    const id = `rev-${state.reviews.length + 1}`;
-    const date = new Date().toISOString().split('T')[0];
-    const newReview = { ...review, id, date } as Review;
-    
-    // Recalculate book rating
-    const updatedBooks = state.books.map((b) => {
-      if (b.id === review.bookId) {
-        const bookReviews = [...state.reviews.filter((r) => r.bookId === b.id), newReview];
-        const newRating = parseFloat((bookReviews.reduce((sum, r) => sum + r.rating, 0) / bookReviews.length).toFixed(1));
-        return {
-          ...b,
-          rating: newRating,
-          reviewsCount: bookReviews.length,
-        };
-      }
-      return b;
-    });
-
-    return {
-      reviews: [...state.reviews, newReview],
-      books: updatedBooks,
-    };
-  }),
-
-  getBookReviews: (bookId) => {
-    return get().reviews.filter((r) => r.bookId === bookId);
+  fetchBooks: async () => {
+    const state = get();
+    set({ isLoading: true });
+    try {
+      const result = await bookService.getBooks({
+        search: state.searchQuery || undefined,
+        categoryId: state.selectedCategoryId || undefined,
+        authorId: state.selectedAuthorId || undefined,
+        type: state.selectedType,
+        minPrice: state.priceRange[0],
+        maxPrice: state.priceRange[1],
+        minRating: state.minRating,
+        sortBy: state.sortBy,
+        page: state.currentPage,
+        size: state.itemsPerPage,
+      });
+      set({ books: result.content, totalPages: result.totalPages });
+    } finally {
+      set({ isLoading: false });
+    }
   },
 
-  updateReadingProgress: (bookId, progress) => set((state) => ({
-    library: state.library.map((item) =>
-      item.bookId === bookId
-        ? { ...item, progress: Math.min(100, Math.max(0, progress)), lastRead: new Date().toISOString().split('T')[0] }
-        : item
-    ),
-  })),
+  fetchAllBooks: async () => {
+    const books = await bookService.getAllBooks();
+    set({ books });
+  },
 
-  downloadFormat: (bookId) => set((state) => ({
-    library: state.library.map((item) =>
-      item.bookId === bookId ? { ...item, downloaded: true } : item
-    ),
-  })),
+  fetchAdminOrders: async () => {
+    const orders = await orderService.getAdminOrders();
+    set({ orders });
+  },
 
-  addBooksToLibraryOnPurchase: (purchaseItems) => set((state) => {
-    const currentLib = [...state.library];
-    
-    purchaseItems.forEach((item) => {
-      if (item.format === 'physical') return; // physical books not inside digital library
-      const exists = currentLib.some((lib) => lib.bookId === item.bookId);
-      if (!exists) {
-        currentLib.push({
-          bookId: item.bookId,
-          progress: 0,
-          format: item.format,
-          lastRead: new Date().toISOString().split('T')[0],
-          downloaded: false,
-        });
-      }
+  setSearchQuery: (query) => { set({ searchQuery: query, currentPage: 1 }); get().fetchBooks(); },
+  setSelectedCategoryId: (id) => { set({ selectedCategoryId: id, currentPage: 1 }); get().fetchBooks(); },
+  setSelectedAuthorId: (id) => { set({ selectedAuthorId: id, currentPage: 1 }); get().fetchBooks(); },
+  setSelectedType: (type) => { set({ selectedType: type, currentPage: 1 }); get().fetchBooks(); },
+  setPriceRange: (range) => { set({ priceRange: range, currentPage: 1 }); get().fetchBooks(); },
+  setMinRating: (rating) => { set({ minRating: rating, currentPage: 1 }); get().fetchBooks(); },
+  setSortBy: (sort) => { set({ sortBy: sort, currentPage: 1 }); get().fetchBooks(); },
+  setCurrentPage: (page) => { set({ currentPage: page }); get().fetchBooks(); },
+  resetFilters: () => {
+    set({
+      searchQuery: '', selectedCategoryId: '', selectedAuthorId: '',
+      selectedType: 'all', priceRange: [0, 30000], minRating: 0,
+      sortBy: 'featured', currentPage: 1,
     });
+    get().fetchBooks();
+  },
 
-    return { library: currentLib };
-  }),
+  toggleWishlist: async (bookId) => {
+    const wishlist = await bookService.toggleWishlist(bookId);
+    set({ wishlist });
+  },
 
-  placeOrder: (order) => set((state) => ({
-    orders: [order, ...state.orders],
-  })),
+  isInWishlist: (bookId) => get().wishlist.includes(bookId),
 
-  updateOrderStatus: (orderId, status) => set((state) => ({
-    orders: state.orders.map((ord) =>
-      ord.id === orderId ? { ...ord, status } : ord
-    ),
-  })),
+  addReview: async (review) => {
+    const created = await bookService.addReview(review.bookId, review.rating, review.comment);
+    set((state) => ({
+      reviews: [...state.reviews.filter((r) => r.id !== created.id), created],
+    }));
+    await get().fetchBooks();
+  },
 
-  // ADMIN ACTIONS
-  addBook: (newBookData) => set((state) => {
-    const id = `book-${state.books.length + 1}`;
-    const newBook: Book = {
-      ...newBookData,
-      id,
-      reviewsCount: 0,
-      rating: 5.0,
-    };
+  getBookReviews: (bookId) => get().reviews.filter((r) => r.bookId === bookId),
 
-    // Update categories count
-    const updatedCategories = state.categories.map((cat) => {
-      if (cat.id === newBook.categoryId) {
-        return { ...cat, booksCount: cat.booksCount + 1 };
-      }
-      return cat;
-    });
+  loadReviews: async (bookId) => {
+    const reviews = await bookService.getReviews(bookId);
+    set((state) => ({
+      reviews: [
+        ...state.reviews.filter((r) => r.bookId !== bookId),
+        ...reviews,
+      ],
+    }));
+  },
 
-    return {
-      books: [newBook, ...state.books],
-      categories: updatedCategories,
-    };
-  }),
+  updateReadingProgress: async (bookId, progress) => {
+    const updated = await bookService.updateLibraryProgress(bookId, progress);
+    set((state) => ({
+      library: state.library.map((item) =>
+        item.bookId === bookId ? { ...item, progress: updated.progress, lastRead: updated.lastRead } : item
+      ),
+    }));
+  },
 
-  updateBook: (id, updated) => set((state) => ({
-    books: state.books.map((b) => (b.id === id ? { ...b, ...updated } : b)),
-  })),
+  downloadFormat: async (bookId) => {
+    const updated = await bookService.markLibraryDownloaded(bookId);
+    set((state) => ({
+      library: state.library.map((item) =>
+        item.bookId === bookId ? { ...item, downloaded: updated.downloaded } : item
+      ),
+    }));
+  },
 
-  deleteBook: (id) => set((state) => {
-    const bookToDelete = state.books.find((b) => b.id === id);
-    if (!bookToDelete) return {};
+  placeOrder: (order) => set((state) => ({ orders: [order, ...state.orders] })),
 
-    // Update categories count
-    const updatedCategories = state.categories.map((cat) => {
-      if (cat.id === bookToDelete.categoryId) {
-        return { ...cat, booksCount: Math.max(0, cat.booksCount - 1) };
-      }
-      return cat;
-    });
+  createOrder: async (payload) => {
+    const order = await orderService.createOrder(payload);
+    set((state) => ({ orders: [order, ...state.orders] }));
+    const library = await bookService.getLibrary().catch(() => get().library);
+    set({ library });
+    return order;
+  },
 
-    return {
+  updateOrderStatus: async (orderId, status) => {
+    const updated = await orderService.updateOrderStatus(orderId, status);
+    set((state) => ({
+      orders: state.orders.map((o) => (o.id === orderId ? updated : o)),
+    }));
+  },
+
+  refreshOrders: async () => {
+    const orders = await orderService.getOrders();
+    set({ orders });
+  },
+
+  addBook: async (newBookData) => {
+    const book = await bookService.createBook(newBookData);
+    set((state) => ({ books: [book, ...state.books] }));
+    const categories = await bookService.getCategories();
+    set({ categories });
+  },
+
+  updateBook: async (id, updated) => {
+    const book = await bookService.updateBook(id, updated);
+    set((state) => ({
+      books: state.books.map((b) => (b.id === id ? book : b)),
+    }));
+  },
+
+  deleteBook: async (id) => {
+    await bookService.deleteBook(id);
+    set((state) => ({
       books: state.books.filter((b) => b.id !== id),
-      categories: updatedCategories,
-    };
-  }),
+    }));
+    const categories = await bookService.getCategories();
+    set({ categories });
+  },
 }));

@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useBookStore } from '../store/useBookStore';
 import { useNotificationStore } from '../store/useNotificationStore';
 import RatingComponent from '../components/RatingComponent';
-import { Book } from '../types';
+import { Book, User } from '../types';
+import { adminService } from '../services/adminService';
+import { bookService } from '../services/bookService';
 import {
   Settings,
   TrendingUp,
@@ -33,11 +35,42 @@ export default function AdminDashboard() {
     updateBook,
     deleteBook,
     updateOrderStatus,
+    fetchAllBooks,
+    fetchAdminOrders,
   } = useBookStore();
 
-  const showToast = useNotificationStore();
-
   const [activeTab, setActiveTab] = useState<'analytics' | 'books' | 'orders' | 'customers'>('analytics');
+  
+  const [users, setUsers] = useState<User[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+
+  useEffect(() => {
+    fetchAllBooks();
+    fetchAdminOrders();
+    loadUsers();
+  }, [fetchAllBooks, fetchAdminOrders]);
+
+  const loadUsers = async () => {
+    setLoadingUsers(true);
+    try {
+      const data = await adminService.getAllUsers();
+      setUsers(data);
+    } catch {
+      showToast.showToast('Erro ao carregar utilizadores.', 'error');
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  const handleRoleChange = async (userId: string, newRole: string) => {
+    try {
+      await adminService.updateUserRole(userId, newRole);
+      setUsers(users.map(u => u.id === userId ? { ...u, role: newRole as any } : u));
+      showToast.showToast('Nível de acesso atualizado com sucesso.', 'success');
+    } catch {
+      showToast.showToast('Erro ao atualizar nível de acesso.', 'error');
+    }
+  };
   
   // Search state inside admin tables
   const [bookSearch, setBookSearch] = useState('');
@@ -59,6 +92,11 @@ export default function AdminDashboard() {
   const [formIsbn, setFormIsbn] = useState('978-3-16-148410-0');
   const [formPublisher, setFormPublisher] = useState('Editora Mulemba');
 
+  // File Upload States
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [ebookFile, setEbookFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
   const handleOpenAddModal = () => {
     setEditingBook(null);
     setFormTitle('');
@@ -71,6 +109,8 @@ export default function AdminDashboard() {
     setFormType('both');
     setFormIsbn('978-3-16-148410-0');
     setFormPublisher('Editora Mulemba');
+    setCoverFile(null);
+    setEbookFile(null);
     setIsAddModalOpen(true);
   };
 
@@ -89,45 +129,70 @@ export default function AdminDashboard() {
     setIsAddModalOpen(true);
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formTitle.trim() || !formDescription.trim()) {
       showToast.showToast('Por favor, preencha o título e as descrições de sinopse necessárias.', 'warning');
       return;
     }
 
-    const newBookData = {
-      title: formTitle,
-      description: formDescription,
-      price: formPrice,
-      categoryId: formCategoryId,
-      authorId: formAuthorId,
-      coverColor: 'from-blue-600 to-indigo-805', // Simple default aesthetic cover
-      coverImage: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=450&auto=format&fit=crop&q=80',
-      type: formType,
-      formats: formType === 'both' ? ['physical', 'pdf', 'epub'] : formType === 'physical' ? ['physical'] : ['pdf', 'epub'],
-      stock: formType === 'digital' ? 999 : formStock,
-      pages: formPages,
-      publishedDate: new Date().toISOString().split('T')[0],
-      isbn: formIsbn,
-      publisher: formPublisher,
-    } as any;
+    setIsUploading(true);
 
-    if (editingBook) {
-      updateBook(editingBook.id, newBookData);
-      showToast.showToast(`Valores do catálogo de "${formTitle}" atualizados com sucesso!`, 'success');
-    } else {
-      addBook(newBookData);
-      showToast.showToast(`Nova publicação "${formTitle}" cadastrada em nosso catálogo!`, 'success');
+    try {
+      let coverImageUrl = editingBook?.coverImage || 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=450&auto=format&fit=crop&q=80';
+      let ebookUrl = editingBook?.ebookFileUrl;
+
+      if (coverFile) {
+        showToast.showToast('Enviando capa do livro...', 'info');
+        coverImageUrl = await bookService.uploadFile(coverFile);
+      }
+
+      if (ebookFile) {
+        showToast.showToast('Enviando ficheiro PDF/EPUB...', 'info');
+        ebookUrl = await bookService.uploadFile(ebookFile);
+      }
+
+      const newBookData = {
+        title: formTitle,
+        description: formDescription,
+        price: formPrice,
+        categoryId: formCategoryId,
+        authorId: formAuthorId,
+        coverColor: 'from-blue-600 to-indigo-805',
+        coverImage: coverImageUrl,
+        ebookFileUrl: ebookUrl,
+        type: formType,
+        formats: formType === 'both' ? ['physical', 'pdf', 'epub'] : formType === 'physical' ? ['physical'] : ['pdf', 'epub'],
+        stock: formType === 'digital' ? 999 : formStock,
+        pages: formPages,
+        publishedDate: new Date().toISOString().split('T')[0],
+        isbn: formIsbn,
+        publisher: formPublisher,
+      } as Omit<Book, 'id'>;
+
+      if (editingBook) {
+        await updateBook(editingBook.id, newBookData);
+        showToast.showToast(`Valores do catálogo de "${formTitle}" atualizados com sucesso!`, 'success');
+      } else {
+        await addBook(newBookData);
+        showToast.showToast(`Nova publicação "${formTitle}" cadastrada em nosso catálogo!`, 'success');
+      }
+      setIsAddModalOpen(false);
+    } catch {
+      showToast.showToast('Erro ao guardar livro ou carregar ficheiros.', 'error');
+    } finally {
+      setIsUploading(false);
     }
-    
-    setIsAddModalOpen(false);
   };
 
-  const handleDeleteBook = (id: string, title: string) => {
+  const handleDeleteBook = async (id: string, title: string) => {
     if (confirm(`Tem certeza absoluta de que deseja excluir "${title}"?`)) {
-      deleteBook(id);
-      showToast.showToast(`"${title}" foi removido do catálogo com sucesso.`, 'info');
+      try {
+        await deleteBook(id);
+        showToast.showToast(`"${title}" foi removido do catálogo com sucesso.`, 'info');
+      } catch {
+        showToast.showToast('Erro ao eliminar livro.', 'error');
+      }
     }
   };
 
@@ -288,6 +353,44 @@ export default function AdminDashboard() {
               </div>
             </div>
 
+            {/* HEATMAP / ACTIVITY GRID */}
+            <div className="rounded-2xl border p-6 bg-white dark:bg-zinc-900 dark:border-zinc-805 mt-6 shadow-sm">
+              <h3 className="text-sm font-bold text-zinc-909 dark:text-zinc-50 flex items-center gap-2 mb-4">
+                <Grid className="h-4.5 w-4.5 text-blue-500" /> Mapa de Calor de Atividade (Acessos/Vendas)
+              </h3>
+              <div className="flex overflow-x-auto pb-2">
+                <div className="grid grid-cols-12 gap-1.5 min-w-[600px] w-full">
+                  {Array.from({ length: 84 }).map((_, i) => {
+                    // Random intensity for MVP visualization
+                    const intensity = Math.floor(Math.random() * 4);
+                    const colorClass = [
+                      'bg-zinc-100 dark:bg-zinc-800',
+                      'bg-emerald-200 dark:bg-emerald-900',
+                      'bg-emerald-400 dark:bg-emerald-700',
+                      'bg-emerald-600 dark:bg-emerald-500',
+                    ][intensity];
+                    return (
+                      <div
+                        key={i}
+                        className={`h-4 w-full rounded-sm ${colorClass} hover:ring-2 ring-emerald-300 transition-all cursor-crosshair`}
+                        title={`Nível de atividade: ${intensity}`}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 justify-end mt-3 text-[10px] text-zinc-500 font-mono">
+                <span>Menos Atividade</span>
+                <div className="flex gap-1">
+                  <div className="h-3 w-3 rounded-sm bg-zinc-100 dark:bg-zinc-800"></div>
+                  <div className="h-3 w-3 rounded-sm bg-emerald-200 dark:bg-emerald-900"></div>
+                  <div className="h-3 w-3 rounded-sm bg-emerald-400 dark:bg-emerald-700"></div>
+                  <div className="h-3 w-3 rounded-sm bg-emerald-600 dark:bg-emerald-500"></div>
+                </div>
+                <span>Mais Atividade</span>
+              </div>
+            </div>
+
           </div>
         )}
 
@@ -434,40 +537,52 @@ export default function AdminDashboard() {
         {activeTab === 'customers' && (
           <div className="rounded-2xl border border-zinc-150 bg-white p-6 dark:bg-zinc-900 dark:border-zinc-805 space-y-4">
             <h3 className="text-base font-bold text-zinc-909 dark:text-zinc-550 flex items-center gap-2">
-              <Users className="h-5 w-5 text-emerald-555" /> Histórico de Usuários Cadastrados
+              <Users className="h-5 w-5 text-emerald-555" /> Gestão de Utilizadores e Permissões
             </h3>
 
-            <div className="space-y-3.5">
-              <div className="flex justify-between items-center text-xs p-3.5 rounded-xl border border-zinc-105 dark:border-zinc-800">
-                <div className="flex items-center gap-3">
-                  <img
-                    src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80"
-                    alt="client"
-                    className="h-8 w-8 rounded-full object-cover"
-                  />
-                  <div>
-                    <h5 className="font-bold text-zinc-905 dark:text-zinc-50">Alexandre Da Costa</h5>
-                    <span className="text-[10px] text-zinc-404 font-mono">alexandredacosta595@gmail.com</span>
+            {loadingUsers ? (
+              <div className="p-10 text-center text-xs text-zinc-500 animate-pulse">Carregando utilizadores...</div>
+            ) : (
+              <div className="space-y-3.5">
+                {users.map((u) => (
+                  <div key={u.id} className="flex flex-col sm:flex-row justify-between sm:items-center text-xs p-3.5 rounded-xl border border-zinc-105 dark:border-zinc-800 gap-3">
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={u.avatar || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80"}
+                        alt="client"
+                        className="h-8 w-8 rounded-full object-cover"
+                      />
+                      <div>
+                        <h5 className="font-bold text-zinc-905 dark:text-zinc-50 flex items-center gap-2">
+                          {u.name}
+                          {u.role === 'admin' && <CheckCircle className="h-3 w-3 text-emerald-500" />}
+                        </h5>
+                        <span className="text-[10px] text-zinc-404 font-mono">{u.email}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2">
+                      <span className="rounded bg-sky-50 text-sky-700 px-2.5 py-0.5 text-[9px] font-bold font-mono uppercase dark:bg-zinc-850 dark:text-sky-400 border border-sky-100 mr-2">
+                        {u.userType || 'Cliente'}
+                      </span>
+                      
+                      <select
+                        value={u.role}
+                        onChange={(e) => handleRoleChange(u.id, e.target.value)}
+                        className={`rounded-lg border px-2.5 py-1 text-xs font-bold outline-none font-mono tracking-wider ${
+                          u.role === 'admin' 
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800' 
+                            : 'bg-zinc-50 text-zinc-600 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700'
+                        }`}
+                      >
+                        <option value="user">USER (Normal)</option>
+                        <option value="admin">ADMIN (Acesso Total)</option>
+                      </select>
+                    </div>
                   </div>
-                </div>
-                <span className="rounded bg-sky-50 text-sky-700 px-2.5 py-0.5 text-[9px] font-bold font-mono uppercase dark:bg-zinc-850 dark:text-sky-400 border border-sky-100">Leitor / Cliente</span>
+                ))}
               </div>
-
-              <div className="flex justify-between items-center text-xs p-3.5 rounded-xl border border-zinc-105 dark:border-zinc-800">
-                <div className="flex items-center gap-3">
-                  <img
-                    src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80"
-                    alt="client"
-                    className="h-8 w-8 rounded-full object-cover"
-                  />
-                  <div>
-                    <h5 className="font-bold text-zinc-905 dark:text-zinc-50">Raymond Vance</h5>
-                    <span className="text-[10px] text-zinc-404 font-mono">vance@syntacticpress.com</span>
-                  </div>
-                </div>
-                <span className="rounded bg-emerald-50 text-emerald-700 px-2.5 py-0.5 text-[9px] font-bold font-mono uppercase dark:bg-zinc-850 dark:text-emerald-400 border border-emerald-100">Autor Independente</span>
-              </div>
-            </div>
+            )}
           </div>
         )}
 
@@ -506,7 +621,7 @@ export default function AdminDashboard() {
           </div>
 
           <div>
-            <label className="text-zinc-405 font-bold font-mono uppercase block mb-1">Preço em Reais (R$) *</label>
+            <label className="text-zinc-405 font-bold font-mono uppercase block mb-1">Preço (Kz) *</label>
             <input
               type="number"
               step="0.01"
@@ -562,6 +677,26 @@ export default function AdminDashboard() {
           </div>
 
           <div>
+            <label className="text-zinc-405 font-bold font-mono uppercase block mb-1">Capa do Livro (Imagem)</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setCoverFile(e.target.files?.[0] || null)}
+              className="w-full rounded-xl border border-zinc-250 bg-white px-3 py-1.5 outline-none focus:border-emerald-600 dark:border-zinc-801 dark:bg-zinc-950 dark:text-zinc-105 font-bold text-zinc-800 text-xs"
+            />
+          </div>
+
+          <div>
+            <label className="text-zinc-405 font-bold font-mono uppercase block mb-1">Ficheiro Digital (PDF/EPUB)</label>
+            <input
+              type="file"
+              accept=".pdf,.epub"
+              onChange={(e) => setEbookFile(e.target.files?.[0] || null)}
+              className="w-full rounded-xl border border-zinc-250 bg-white px-3 py-1.5 outline-none focus:border-emerald-600 dark:border-zinc-801 dark:bg-zinc-950 dark:text-zinc-105 font-bold text-zinc-800 text-xs"
+            />
+          </div>
+
+          <div>
             <label className="text-zinc-405 font-bold font-mono uppercase block mb-1">Número de Páginas</label>
             <input
               type="number"
@@ -608,19 +743,24 @@ export default function AdminDashboard() {
             />
           </div>
 
-          <div className="sm:col-span-2 pt-4 border-t flex gap-3">
+          <div className="sm:col-span-2 pt-2 border-t border-zinc-150 dark:border-zinc-805 mt-2 flex justify-end gap-3">
             <button
               type="button"
               onClick={() => setIsAddModalOpen(false)}
-              className="flex-1 py-3 text-xs font-bold bg-zinc-100 rounded-xl hover:bg-zinc-200 cursor-pointer text-center text-zinc-705 dark:bg-zinc-800 dark:text-zinc-300"
+              className="rounded-xl px-5 py-2.5 text-xs font-bold text-zinc-650 hover:bg-zinc-100 dark:text-zinc-350 dark:hover:bg-zinc-805"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="flex-1 py-3 text-xs font-bold rounded-xl bg-emerald-650 hover:bg-emerald-755 text-white shadow shadow-emerald-500/10 cursor-pointer"
+              disabled={isUploading}
+              className="rounded-xl bg-emerald-600 px-5 py-2.5 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-2 shadow-sm"
             >
-              {editingBook ? 'Salvar Alterações' : 'Publicar no Catálogo'}
+              {isUploading ? (
+                <>Enviando Ficheiros...</>
+              ) : (
+                <>{editingBook ? 'Salvar Edição' : 'Cadastrar Obra'}</>
+              )}
             </button>
           </div>
         </form>

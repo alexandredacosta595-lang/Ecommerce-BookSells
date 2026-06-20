@@ -10,6 +10,7 @@ export interface Book {
   rating: number;
   coverImage: string;
   coverColor: string; // Tailwind readable background color representation (e.g. from-blue-500 to-indigo-600)
+  ebookFileUrl?: string;
   type: 'physical' | 'digital' | 'both';
   formats: ('physical' | 'pdf' | 'epub')[];
   stock: number;

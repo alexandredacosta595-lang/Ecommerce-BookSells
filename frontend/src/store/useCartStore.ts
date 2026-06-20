@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { CartItem, Book } from '../types';
-import { mockPromoCodes } from '../utils/mockData';
+import { couponService } from '../services/bookService';
 
 interface CartState {
   items: CartItem[];
@@ -9,7 +9,7 @@ interface CartState {
   addItem: (book: Book, format: 'physical' | 'pdf' | 'epub') => void;
   removeItem: (bookId: string, format: 'physical' | 'pdf' | 'epub') => void;
   updateQuantity: (bookId: string, format: 'physical' | 'pdf' | 'epub', quantity: number) => void;
-  applyCoupon: (code: string) => boolean;
+  applyCoupon: (code: string) => Promise<boolean>;
   removeCoupon: () => void;
   clearCart: () => void;
   getCartSummary: () => {
@@ -63,13 +63,19 @@ export const useCartStore = create<CartState>((set, get) => ({
     }));
   },
 
-  applyCoupon: (code) => {
+  applyCoupon: async (code) => {
     const formattedCode = code.trim().toUpperCase();
-    if (mockPromoCodes[formattedCode] !== undefined) {
-      set({ couponCode: formattedCode });
-      return true;
+    const subtotal = get().items.reduce((sum, item) => sum + item.book.price * item.quantity, 0);
+    try {
+      const result = await couponService.validate(formattedCode, subtotal);
+      if (result.valid) {
+        set({ couponCode: formattedCode, discount: Number(result.discount) });
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
     }
-    return false;
   },
 
   removeCoupon: () => {
@@ -81,34 +87,16 @@ export const useCartStore = create<CartState>((set, get) => ({
   },
 
   getCartSummary: () => {
-    const { items, couponCode } = get();
-    const subtotal = items.reduce((sum, item) => sum + item.book.price * item.quantity, 0);
+    const { items, couponCode, discount: storedDiscount } = get();
+    const subtotal = items.reduce((sum, item) => sum + Number(item.book.price) * item.quantity, 0);
 
-    let discount = 0;
-    if (couponCode) {
-      const discountValue = mockPromoCodes[couponCode];
-      if (discountValue < 1) {
-        // Percentage discount
-        discount = subtotal * discountValue;
-      } else {
-        // Flat discount
-        discount = Math.min(subtotal, discountValue);
-      }
-    }
-
+    const discount = couponCode ? storedDiscount : 0;
     const hasPhysical = items.some((item) => item.selectedFormat === 'physical');
-    const shipping = hasPhysical ? (subtotal - discount >= 50 ? 0 : 4.99) : 0;
-    const taxableAmount = Math.max(0, subtotal - discount);
-    const tax = taxableAmount * 0.08; // 8% local tax
-    const total = taxableAmount + shipping + tax;
+    const afterDiscount = Math.max(0, subtotal - discount);
+    const shipping = hasPhysical ? (afterDiscount >= 50 ? 0 : 4.99) : 0;
+    const tax = afterDiscount * 0.08;
+    const total = afterDiscount + shipping + tax;
 
-    return {
-      subtotal,
-      discount,
-      shipping,
-      tax,
-      total,
-      hasPhysical,
-    };
+    return { subtotal, discount, shipping, tax, total, hasPhysical };
   },
 }));

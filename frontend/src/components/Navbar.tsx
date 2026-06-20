@@ -26,7 +26,7 @@ export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   
-  const { user, isAuthenticated, toggleRole, logout } = useAuthStore();
+  const { user, isAuthenticated, logout } = useAuthStore();
   const { theme, toggleTheme } = useThemeStore();
   const cartItems = useCartStore((state) => state.items);
   const wishlist = useBookStore((state) => state.wishlist);
@@ -42,13 +42,6 @@ export default function Navbar() {
     logout();
     setIsProfileDropdownOpen(false);
     navigate('/login');
-  };
-
-  const handleToggleRoleDemo = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    toggleRole();
-    setIsProfileDropdownOpen(false);
   };
 
   const handleNavigationAndClose = (path: string) => {
@@ -237,14 +230,6 @@ export default function Navbar() {
                       </Link>
                     )}
 
-                    {/* Quick Demo Option to swap Admin/User */}
-                    <button
-                      onClick={handleToggleRoleDemo}
-                      className="flex w-full items-center gap-2 rounded-xl px-3.5 py-2 text-left text-xs font-semibold text-amber-600 bg-amber-50/50 hover:bg-amber-100/50 dark:text-amber-450 dark:bg-amber-950/20 dark:hover:bg-amber-955 mt-1 border border-dashed border-amber-200 dark:border-amber-900/40 cursor-pointer"
-                    >
-                      {user?.role === 'admin' ? 'Demo: Agir como Leitor' : 'Demo: Desbloquear Admin'}
-                    </button>
-
                     <div className="border-t border-zinc-100 dark:border-zinc-805 mt-2 pt-2">
                       <button
                         onClick={handleLogout}
@@ -343,16 +328,6 @@ export default function Navbar() {
                       <p className="text-xs text-zinc-400">{user?.email}</p>
                     </div>
                   </div>
-                  {/* Swap Role Demo Toggler in mobile */}
-                  <button
-                    onClick={(e) => {
-                      toggleRole();
-                      setIsMobileMenuOpen(false);
-                    }}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold text-amber-600 border border-dashed border-amber-200 dark:border-amber-900 bg-amber-50/20 mb-3"
-                  >
-                    Alternar para {user?.role === 'admin' ? 'Leitor' : 'Administrador'}
-                  </button>
                   <button
                     onClick={handleLogout}
                     className="flex w-full items-center gap-2 rounded-xl px-4 py-3 text-left text-sm font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-955/20"

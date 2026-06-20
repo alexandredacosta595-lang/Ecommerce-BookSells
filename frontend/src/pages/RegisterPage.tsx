@@ -18,15 +18,20 @@ export default function RegisterPage() {
   const [state, setState] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
 
-  const login = useAuthStore((state) => state.login);
+  const register = useAuthStore((state) => state.register);
   const showToast = useNotificationStore((state) => state.showToast);
   const navigate = useNavigate();
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!name.trim() || !email.trim() || !password.trim() || !confirmPassword.trim()) {
       showToast('Todos os campos são obrigatórios.', 'warning');
+      return;
+    }
+
+    if (password.length < 8) {
+      showToast('A senha deve ter pelo menos 8 caracteres.', 'warning');
       return;
     }
 
@@ -40,32 +45,28 @@ export default function RegisterPage() {
       return;
     }
 
-    // Register user by triggering auth store login with type settings
-    login(email, name, userType, {
-      companyName: userType !== 'reader' ? (companyName || name) : undefined,
-      city: city || undefined,
-      state: state || undefined,
-      whatsapp: whatsapp || undefined,
-      phone: whatsapp || undefined,
-      bio: userType === 'reader' 
-        ? 'Leitor voraz atrás de novas descobertas e livros usados especiais.' 
-        : userType === 'bookstore' 
-        ? `Livraria especializada trazendo títulos selecionados de ${city || 'nossa sede'}.`
+    try {
+      await register(email, password, name, userType, {
+        companyName: userType !== 'reader' ? (companyName || name) : undefined,
+        city: city || undefined,
+        state: state || undefined,
+        whatsapp: whatsapp || undefined,
+        phone: whatsapp || undefined,
+      });
+
+      const successMessage = userType === 'reader'
+        ? `Bem-vindo a bordo, ${name}! Explore novos livros e anuncie seus livros usados.`
+        : userType === 'bookstore'
+        ? `Livraria "${companyName || name}" cadastrada com sucesso!`
         : userType === 'publisher'
-        ? 'Editora literária comprometida com a curadoria de títulos extraordinários.'
-        : `Autor independente publicando obras originais diretamente aos leitores.`
-    });
+        ? `Ecossistema de Editora criado para "${companyName || name}"!`
+        : `Perfil de Autor criado para "${name}"!`;
 
-    const successMessage = userType === 'reader'
-      ? `Bem-vindo a bordo, ${name}! Explore novos livros e anuncie seus livros usados.`
-      : userType === 'bookstore'
-      ? `Livraria "${companyName || name}" cadastrada com sucesso! Comece a anunciar seus títulos de estoque local.`
-      : userType === 'publisher'
-      ? `Ecossistema de Editora criado com sucesso para "${companyName || name}"!`
-      : `Perfil de Autor Independente criado para "${name}"! Publique suas próprias obras diretamente para os leitores.`;
-
-    showToast(successMessage, 'success');
-    navigate('/dashboard');
+      showToast(successMessage, 'success');
+      navigate('/dashboard');
+    } catch {
+      showToast('Erro ao criar conta. Verifique se o e-mail já está registado.', 'error');
+    }
   };
 
   return (
@@ -135,8 +136,8 @@ export default function RegisterPage() {
                   }`}
                 >
                   <UserCheck className="h-5 w-5 mb-1.5 text-blue-500" />
-                  <span className="text-xs font-bold block">Leitor & Vendedor</span>
-                  <span className="text-[9px] text-zinc-400 font-mono mt-0.5 leading-tight font-medium">Compre e venda livros usados</span>
+                  <span className="text-xs font-bold block">Apenas Leitor</span>
+                  <span className="text-[9px] text-zinc-400 font-mono mt-0.5 leading-tight font-medium">Só pode comprar e ler, não cria livros</span>
                 </button>
 
                 <button

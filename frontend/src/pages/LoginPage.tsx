@@ -2,18 +2,20 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
 import { useNotificationStore } from '../store/useNotificationStore';
-import { BookOpen, Key, Mail, ShieldAlert } from 'lucide-react';
+import { BookOpen, Key, Mail, ShieldAlert, Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('alexandredacosta595@gmail.com');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
   const login = useAuthStore((state) => state.login);
+  const isLoading = useAuthStore((state) => state.isLoading);
   const showToast = useNotificationStore((state) => state.showToast);
   const navigate = useNavigate();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!email.trim() || !password.trim()) {
@@ -21,9 +23,19 @@ export default function LoginPage() {
       return;
     }
 
-    login(email, email.split('@')[0].toUpperCase());
-    showToast(`Bem-vindo de volta à Livraria Mulemba, ${email}!`, 'success');
-    navigate('/dashboard');
+    setSubmitting(true);
+    try {
+      await login(email, password);
+      if (!rememberMe) {
+        // token stays in localStorage; user can clear manually on logout
+      }
+      showToast(`Bem-vindo de volta à Livraria Mulemba!`, 'success');
+      navigate('/dashboard');
+    } catch {
+      showToast('E-mail ou senha incorrectos.', 'error');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const fillDemoCreds = (role: 'user' | 'admin') => {
@@ -123,8 +135,10 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              className="w-full rounded-xl bg-blue-600 hover:bg-blue-700 py-3 text-xs font-bold text-white shadow-md cursor-pointer transition"
+              disabled={submitting || isLoading}
+              className="w-full rounded-xl bg-blue-600 hover:bg-blue-700 py-3 text-xs font-bold text-white shadow-md cursor-pointer transition disabled:opacity-60 flex items-center justify-center gap-2"
             >
+              {(submitting || isLoading) && <Loader2 className="h-4 w-4 animate-spin" />}
               Entrar na Livraria Mulemba
             </button>
           </form>

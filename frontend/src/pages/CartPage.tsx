@@ -31,11 +31,11 @@ export default function CartPage() {
 
   const { subtotal, discount, shipping, tax, total, hasPhysical } = getCartSummary();
 
-  const handleApplyPromo = (e: React.FormEvent) => {
+  const handleApplyPromo = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!promoInput.trim()) return;
 
-    const success = applyCoupon(promoInput);
+    const success = await applyCoupon(promoInput);
     if (success) {
       showToast('Cupom de desconto aplicado com sucesso!', 'success');
       setPromoInput('');

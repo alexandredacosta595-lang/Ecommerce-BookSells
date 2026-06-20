@@ -18,9 +18,9 @@ import {
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
-  const { items, clearCart, getCartSummary } = useCartStore();
-  const { placeOrder, addBooksToLibraryOnPurchase } = useBookStore();
-  const { user } = useAuthStore();
+  const { items, clearCart, getCartSummary, couponCode } = useCartStore();
+  const { createOrder } = useBookStore();
+  const { user, isAuthenticated } = useAuthStore();
   const { showToast } = useNotificationStore();
 
   const { subtotal, discount, shipping: shippingCharge, tax, total } = getCartSummary();
@@ -42,65 +42,48 @@ export default function CheckoutPage() {
   const [cardExpiry, setCardExpiry] = useState('12/28');
   const [cardCvc, setCardCvc] = useState('412');
 
-  const handleOrderSubmit = (e: React.FormEvent) => {
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+
+  const handleOrderSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!isAuthenticated) {
+      showToast('Faça login para finalizar a compra.', 'warning');
+      navigate('/login');
+      return;
+    }
 
     if (!fullName.trim() || !street.trim() || !city.trim() || !zipCode.trim() || !phone.trim()) {
       showToast('Por favor, preencha todos os campos obrigatórios do endereço.', 'warning');
       return;
     }
 
-    const orderId = `ord-${1000 + Math.floor(Math.random() * 9000)}`;
+    setIsProcessingPayment(true);
+    showToast('Processando pagamento com a sua instituição...', 'info');
 
-    const newOrder: Order = {
-      id: orderId,
-      userId: user?.id || 'usr-guest',
-      date: new Date().toISOString().split('T')[0],
-      status: 'processing',
-      subtotal,
-      discount,
-      shippingCharge,
-      tax,
-      total,
-      paymentMethod,
-      shippingAddress: {
-        fullName,
-        street,
-        city,
-        state,
-        zipCode,
-        country,
-        phone,
-      },
-      items: items.map((i) => ({
-        bookId: i.bookId,
-        title: i.book.title,
-        price: i.book.price,
-        quantity: i.quantity,
-        selectedFormat: i.selectedFormat,
-        coverImage: i.book.coverImage,
-      })),
-    };
+    try {
+      // Simulate network/payment gateway delay
+      await new Promise(resolve => setTimeout(resolve, 2500));
 
-    // Place order under BookStore
-    placeOrder(newOrder);
+      const order = await createOrder({
+        items: items.map((i) => ({
+          bookId: i.bookId,
+          selectedFormat: i.selectedFormat,
+          quantity: i.quantity,
+        })),
+        couponCode: couponCode || undefined,
+        paymentMethod,
+        shippingAddress: { fullName, street, city, state, zipCode, country, phone },
+      });
 
-    // Sync any digital formats onto digital library bookshelf
-    const digitalPurchased = items
-      .filter((i) => i.selectedFormat === 'pdf' || i.selectedFormat === 'epub')
-      .map((i) => ({ bookId: i.bookId, format: i.selectedFormat }));
-    
-    if (digitalPurchased.length > 0) {
-      addBooksToLibraryOnPurchase(digitalPurchased);
-      showToast('✨ Seus eBooks digitais foram adicionados diretamente à sua Biblioteca Digital!', 'info', 5050);
+      clearCart();
+      showToast(`Pagamento aprovado! Pedido realizado com sucesso! ID: ${order.id}`, 'success', 5000);
+      navigate('/dashboard', { state: { defaultTab: 'orders' } });
+    } catch {
+      showToast('Erro ao processar pedido. Verifique stock e tente novamente.', 'error');
+    } finally {
+      setIsProcessingPayment(false);
     }
-
-    // Clear cart and display success!
-    clearCart();
-    showToast(`Pedido realizado com sucesso! ID do pedido: ${orderId}`, 'success', 5000);
-    
-    // Redirect to Dashboard: Orders tab
-    navigate('/dashboard', { state: { defaultTab: 'orders' } });
   };
 
   if (items.length === 0) {
@@ -379,9 +362,22 @@ export default function CheckoutPage() {
             {/* Check progress button */}
             <button
               type="submit"
-              className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 py-3.5 text-sm font-extrabold text-white shadow-md cursor-pointer transition select-none uppercase tracking-wide"
+              disabled={isProcessingPayment}
+              className={`w-full flex items-center justify-center gap-1.5 rounded-xl py-3.5 text-sm font-extrabold text-white shadow-md transition select-none uppercase tracking-wide ${
+                isProcessingPayment 
+                  ? 'bg-zinc-400 cursor-not-allowed dark:bg-zinc-700' 
+                  : 'bg-blue-600 hover:bg-blue-700 cursor-pointer'
+              }`}
             >
-              <ShieldCheck className="h-5 w-5 text-amber-400 animate-pulse" /> Finalizar & Pagar Kz {total.toLocaleString('pt-AO')}
+              {isProcessingPayment ? (
+                <>
+                  <Sparkles className="h-5 w-5 animate-spin text-zinc-100" /> Processando...
+                </>
+              ) : (
+                <>
+                  <ShieldCheck className="h-5 w-5 text-amber-400 animate-pulse" /> Finalizar & Pagar Kz {total.toLocaleString('pt-AO')}
+                </>
+              )}
             </button>
           </div>
 

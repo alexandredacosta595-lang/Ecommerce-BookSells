@@ -218,7 +218,7 @@ export default function Catalog() {
             Faixa de Preço
           </h4>
           <span className="text-xs font-bold text-zinc-900 dark:text-zinc-300 font-mono">
-            R$ {priceRange[0]} - R$ {priceRange[1]}
+            Kz {priceRange[0]} - Kz {priceRange[1]}
           </span>
         </div>
         <div className="mt-3.5 space-y-2">

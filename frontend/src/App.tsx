@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { useThemeStore } from '@/store/useThemeStore';
+import { useAuthStore } from '@/store/useAuthStore';
+import { useBookStore } from '@/store/useBookStore';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ToastNotifications from '@/components/ToastNotifications';
@@ -9,8 +11,9 @@ import AppRoutes from '@/routes';
 export default function App() {
   const { theme } = useThemeStore();
   const isDarkMode = theme === 'dark';
+  const loadSession = useAuthStore((s) => s.loadSession);
+  const initialize = useBookStore((s) => s.initialize);
 
-  // Sync systemic theme variables
   useEffect(() => {
     const root = window.document.documentElement;
     if (isDarkMode) {
@@ -19,6 +22,11 @@ export default function App() {
       root.classList.remove('dark');
     }
   }, [isDarkMode]);
+
+  useEffect(() => {
+    loadSession();
+    initialize();
+  }, [loadSession, initialize]);
 
   return (
     <BrowserRouter>

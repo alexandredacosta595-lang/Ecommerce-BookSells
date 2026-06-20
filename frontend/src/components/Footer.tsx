@@ -33,7 +33,7 @@ export default function Footer() {
               </span>
             </div>
             <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-sm leading-relaxed">
-              Curating unparalleled reading journeys across both tactile, smell-of-ink physical bindings and seamless, instant-open EPUB/PDF digital formats. Created with absolute architectural craft.
+              Criando experiências de leitura incomparáveis, tanto em encadernações físicas táteis com cheiro de tinta quanto em formatos digitais EPUB/PDF de abertura instantânea e sem interrupções. Concebidas com absoluta maestria arquitetônica.
             </p>
             <div className="flex gap-4.5 pt-2">
               <a href="#" className="text-zinc-400 hover:text-blue-600 transition-colors">
@@ -52,27 +52,27 @@ export default function Footer() {
           <div className="grid grid-cols-2 gap-8 lg:col-span-2 sm:grid-cols-3">
             <div>
               <h5 className="text-xs font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 font-mono">
-                Store Catalog
+                Catálogo da Loja
               </h5>
               <ul className="mt-4 space-y-2.5">
                 <li>
                   <Link to="/catalog" className="text-sm text-zinc-500 hover:text-zinc-90 w-fit dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors">
-                    Physical Bindings
+                    Ligações Físicas
                   </Link>
                 </li>
                 <li>
                   <Link to="/catalog" className="text-sm text-zinc-500 hover:text-zinc-90 pt-0.5 w-fit dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors">
-                    Digital ePUBs
+                    ePUBs digitais
                   </Link>
                 </li>
                 <li>
                   <Link to="/catalog" className="text-sm text-zinc-500 hover:text-zinc-90 pt-0.5 w-fit dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors">
-                    PDF Deliveries
+                   Entregas em PDF
                   </Link>
                 </li>
                 <li>
                   <span className="text-xs font-mono text-zinc-405 dark:text-zinc-510 bg-zinc-200 dark:bg-zinc-850 px-1.5 py-0.5 rounded-md inline-block mt-1">
-                    Spring Boot REST prepared
+                    Spring Boot REST preparado
                   </span>
                 </li>
               </ul>
@@ -80,22 +80,22 @@ export default function Footer() {
 
             <div>
               <h5 className="text-xs font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-505 font-mono">
-                My Space
+                Meu espaço
               </h5>
               <ul className="mt-4 space-y-2.5">
                 <li>
                   <Link to="/digital-library" className="text-sm text-zinc-500 hover:text-zinc-90 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors">
-                    Digital Bookshelves
+                    Estantes Digitais
                   </Link>
                 </li>
                 <li>
                   <Link to="/dashboard" className="text-sm text-zinc-500 hover:text-zinc-90 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors">
-                    Purchased Orders
+                    Compras Realizadas
                   </Link>
                 </li>
                 <li>
                   <Link to="/dashboard" className="text-sm text-zinc-500 hover:text-zinc-90 dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors">
-                    Saved Wishlist
+                    Lista de desejos salva
                   </Link>
                 </li>
               </ul>
@@ -104,10 +104,10 @@ export default function Footer() {
             {/* NEWSLETTER FORM */}
             <div className="col-span-2 sm:col-span-1">
               <h5 className="text-xs font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-505 font-mono">
-                Subscribe Insights
+                Assinar informações
               </h5>
               <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-405 leading-relaxed">
-                Receive weekly curated essays, critical breakdowns, and coupon code bundles directly.
+                Receba semanalmente ensaios selecionados, análises críticas e pacotes de códigos de desconto diretamente em sua casa.
               </p>
               <form onSubmit={handleSubscribe} className="mt-4 flex flex-col gap-2">
                 <div className="relative flex items-center">
@@ -137,10 +137,10 @@ export default function Footer() {
           </p>
           <div className="flex items-center gap-1 text-xs text-zinc-400 font-medium font-mono">
             <Shield className="h-3.5 w-3.5 text-blue-500" />
-            <span>Secured Session</span>
+            <span>Sessão Segura</span>
             <span className="mx-1">•</span>
             <Heart className="h-3 w-3 text-rose-500 animate-pulse" />
-            <span>Modern Stack UI</span>
+            <span>UI de pilha moderna</span>
           </div>
         </div>
       </div>

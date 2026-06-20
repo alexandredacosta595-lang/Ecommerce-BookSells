@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useBookStore } from '../store/useBookStore';
 import { useCartStore } from '../store/useCartStore';
@@ -29,7 +29,7 @@ export default function BookDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const { books, authors, reviews, addReview, toggleWishlist, isInWishlist } = useBookStore();
+  const { books, authors, reviews, addReview, toggleWishlist, isInWishlist, loadReviews } = useBookStore();
   const { addItem } = useCartStore();
   const { user, isAuthenticated } = useAuthStore();
   const { showToast } = useNotificationStore();
@@ -43,13 +43,18 @@ export default function BookDetails() {
 
   // Find targeted book
   const book = books.find((b) => b.id === id);
+
+  useEffect(() => {
+    if (id) loadReviews(id);
+  }, [id, loadReviews]);
+
   if (!book) {
     return (
       <div className="py-20 text-center space-y-4">
-        <h2 className="text-2xl font-bold">Book Not Found</h2>
-        <p className="text-zinc-500">The publication you requested doesn't exist or was deleted.</p>
+        <h2 className="text-2xl font-bold">Livro não encontrado</h2>
+        <p className="text-zinc-500">A publicação que você solicitou não existe ou foi excluída..</p>
         <Link to="/catalog" className="inline-block rounded-xl bg-blue-600 text-white px-6 py-2">
-          Return to Catalog
+          Voltar ao Catálogo
         </Link>
       </div>
     );
@@ -77,8 +82,12 @@ export default function BookDetails() {
     navigate('/checkout');
   };
 
-  const handleWishlist = () => {
-    toggleWishlist(book.id);
+  const handleWishlist = async () => {
+    if (!isAuthenticated) {
+      showToast('Faça login para adicionar aos favoritos.', 'warning');
+      return;
+    }
+    await toggleWishlist(book.id);
     if (!isFav) {
       showToast(`Adicionado aos favoritos!`, 'success');
     } else {
@@ -86,23 +95,30 @@ export default function BookDetails() {
     }
   };
 
-  const handlePostReview = (e: React.FormEvent) => {
+  const handlePostReview = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isAuthenticated) {
+      showToast('Faça login para publicar uma avaliação.', 'warning');
+      return;
+    }
     if (!comment.trim()) {
       showToast('Por favor, escreva um comentário primeiro.', 'warning');
       return;
     }
-    
-    addReview({
-      bookId: book.id,
-      userName: user?.name || 'Leitor Anônimo',
-      userAvatar: user?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80',
-      rating: newRating,
-      comment: comment.trim(),
-    });
 
-    showToast('Sua avaliação foi publicada. Obrigado!', 'success');
-    setComment('');
+    try {
+      await addReview({
+        bookId: book.id,
+        userName: user?.name || 'Leitor',
+        userAvatar: user?.avatar,
+        rating: newRating,
+        comment: comment.trim(),
+      });
+      showToast('Sua avaliação foi publicada. Obrigado!', 'success');
+      setComment('');
+    } catch {
+      showToast('Erro ao publicar avaliação.', 'error');
+    }
   };
 
   // Get related books in the same category
@@ -207,7 +223,7 @@ export default function BookDetails() {
                   }`}
                 >
                   <div className="flex items-center gap-2 text-zinc-850 dark:text-zinc-100 font-bold text-sm">
-                    <FileText className="h-4 w-4 text-rose-500" /> Download PDF
+                    <FileText className="h-4 w-4 text-rose-500" /> Baixar PDF
                   </div>
                   <span className="text-xs text-zinc-500 mt-1">Arquivos vetoriais em alta fidelidade. Otimizado para telas e tablets.</span>
                   <span className="text-sm font-black text-zinc-909 mt-3 dark:text-zinc-100 font-mono">Kz {book.price.toLocaleString('pt-AO')}</span>
