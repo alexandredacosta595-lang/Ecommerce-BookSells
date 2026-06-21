@@ -3,6 +3,7 @@ package com.mulemba.booksells.dto;
 import com.mulemba.booksells.model.Category;
 
 public record CategoryResponse(
+        String id,
         String name,
         String slug,
         String iconName,
@@ -10,6 +11,7 @@ public record CategoryResponse(
 ) {
     public static CategoryResponse from(Category category) {
         return new CategoryResponse(
+                category.getId(),
                 category.getName(),
                 category.getSlug(),
                 category.getIconName(),

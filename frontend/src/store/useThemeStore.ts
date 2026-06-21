@@ -21,8 +21,18 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
   },
   initializeTheme: () => {
     const saved = localStorage.getItem('bookverse-theme') as 'light' | 'dark' | null;
-    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const initial = saved || (systemPrefersDark ? 'dark' : 'light');
+    let initial: 'light' | 'dark';
+    
+    if (saved) {
+      initial = saved;
+    } else {
+      // A/B Test: Randomly assign 50% users to Dark Mode and 50% to Light Mode
+      initial = Math.random() > 0.5 ? 'dark' : 'light';
+      localStorage.setItem('bookverse-theme', initial);
+      localStorage.setItem('ab_test_theme_variant', initial);
+      
+      // We will track this assignment in App.tsx using PixelService
+    }
     
     set({ theme: initial });
     if (initial === 'dark') {

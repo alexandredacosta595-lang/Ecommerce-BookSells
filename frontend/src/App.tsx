@@ -7,6 +7,8 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import ToastNotifications from '@/components/ToastNotifications';
 import AppRoutes from '@/routes';
+import HeatmapTracker from '@/components/HeatmapTracker';
+import { PixelService } from '@/services/PixelService';
 
 export default function App() {
   const { theme } = useThemeStore();
@@ -22,6 +24,17 @@ export default function App() {
       root.classList.remove('dark');
     }
   }, [isDarkMode]);
+
+  // Pixel and A/B Tracking Initialization
+  useEffect(() => {
+    const variant = localStorage.getItem('ab_test_theme_variant');
+    if (variant) {
+      PixelService.track('ab_test_view', { variant });
+    }
+    
+    // Simplistic page_view track on load
+    PixelService.track('page_view', { initial: true });
+  }, []);
 
   useEffect(() => {
     loadSession();
@@ -42,6 +55,7 @@ export default function App() {
 
         <Footer />
         <ToastNotifications />
+        <HeatmapTracker />
       </div>
     </BrowserRouter>
   );

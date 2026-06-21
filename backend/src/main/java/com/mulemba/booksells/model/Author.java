@@ -6,7 +6,7 @@ import lombok.*;
 import java.util.UUID;
 
 @Entity
-@Table(name = "authors")
+@Table(name = "autores")
 @Getter
 @Setter
 @NoArgsConstructor

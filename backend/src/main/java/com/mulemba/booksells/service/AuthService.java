@@ -3,26 +3,33 @@ package com.mulemba.booksells.service;
 import com.mulemba.booksells.dto.*;
 import com.mulemba.booksells.exception.BusinessException;
 import com.mulemba.booksells.exception.ResourceNotFoundException;
+import com.mulemba.booksells.model.Role;
 import com.mulemba.booksells.model.User;
-import com.mulemba.booksells.model.enums.UserRole;
 import com.mulemba.booksells.model.enums.UserType;
+import com.mulemba.booksells.repository.RoleRepository;
 import com.mulemba.booksells.repository.UserRepository;
 import com.mulemba.booksells.security.AuthenticatedUser;
 import com.mulemba.booksells.security.JwtService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.Collection;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
 
@@ -38,12 +45,17 @@ public class AuthService {
             throw new BusinessException("Nome da empresa é obrigatório para livrarias e editoras");
         }
 
+        Role userRole = roleRepository.findByName("ROLE_USER")
+                .orElseThrow(() -> new BusinessException("Role padrão não encontrada"));
+        Role sellerRole = roleRepository.findByName("ROLE_SELLER")
+                .orElseThrow(() -> new BusinessException("Role de vendedor não encontrada"));
+
         String id = "usr-" + UUID.randomUUID().toString().substring(0, 8);
         User user = User.builder()
                 .name(request.name().trim())
                 .email(request.email().toLowerCase().trim())
                 .password(passwordEncoder.encode(request.password()))
-                .role(UserRole.USER)
+                .roles(new java.util.HashSet<>(Set.of(userType == UserType.READER ? userRole : sellerRole)))
                 .userType(userType)
                 .companyName(request.companyName())
                 .city(request.city())
@@ -97,7 +109,11 @@ public class AuthService {
     }
 
     private AuthResponse buildAuthResponse(User user) {
-        AuthenticatedUser authUser = new AuthenticatedUser(user.getId(),user.getEmail(), user.getRole());
+        Collection<? extends GrantedAuthority> authorities = user.getRoles().stream()
+                .map(role -> new SimpleGrantedAuthority(role.getName()))
+                .collect(Collectors.toList());
+
+        AuthenticatedUser authUser = new AuthenticatedUser(user.getId(), user.getEmail(), authorities);
         String token = jwtService.generateToken(authUser);
         return new AuthResponse(token, UserResponse.from(user));
     }

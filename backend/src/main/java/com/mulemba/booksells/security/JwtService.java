@@ -1,17 +1,21 @@
 package com.mulemba.booksells.security;
 
-import com.mulemba.booksells.model.enums.UserRole;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class JwtService {
@@ -29,7 +33,11 @@ public class JwtService {
     public String generateToken(AuthenticatedUser user) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", user.getUserId());
-        claims.put("role", user.getRole().name());
+        
+        List<String> authorities = user.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.toList());
+        claims.put("authorities", authorities);
 
         return Jwts.builder()
                 .setClaims(claims)
@@ -59,10 +67,18 @@ public class JwtService {
 
     public AuthenticatedUser extractUser(String token) {
         Claims claims = extractClaims(token);
+        
+        @SuppressWarnings("unchecked")
+        List<String> authoritiesStrings = claims.get("authorities", List.class);
+        
+        Collection<? extends GrantedAuthority> authorities = authoritiesStrings.stream()
+                .map(SimpleGrantedAuthority::new)
+                .collect(Collectors.toList());
+
         return new AuthenticatedUser(
                 claims.get("userId", String.class),
                 claims.getSubject(),
-                UserRole.valueOf(claims.get("role", String.class))
+                authorities
         );
     }
 }

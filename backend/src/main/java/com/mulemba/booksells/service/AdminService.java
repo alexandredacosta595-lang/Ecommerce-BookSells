@@ -13,7 +13,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 import com.mulemba.booksells.dto.UserResponse;
 import com.mulemba.booksells.model.User;
-import com.mulemba.booksells.model.enums.UserRole;
+import com.mulemba.booksells.model.Role;
+import com.mulemba.booksells.repository.RoleRepository;
 import com.mulemba.booksells.exception.ResourceNotFoundException;
 
 @Service
@@ -23,6 +24,7 @@ public class AdminService {
     private final BookRepository bookRepository;
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
 
     public AdminStatsResponse getStats() {
         BigDecimal revenue = orderRepository.findAll().stream()
@@ -49,10 +51,15 @@ public class AdminService {
                 .collect(Collectors.toList());
     }
 
-    public UserResponse updateUserRole(String userId, String role) {
+    public UserResponse updateUserRole(String userId, String roleName) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        user.setRole(role.equalsIgnoreCase("admin") ? UserRole.ADMIN : UserRole.USER);
+        
+        String targetRoleName = roleName.equalsIgnoreCase("admin") ? "ROLE_ADMIN" : "ROLE_USER";
+        Role role = roleRepository.findByName(targetRoleName)
+                .orElseThrow(() -> new ResourceNotFoundException("Role not found"));
+                
+        user.setRoles(java.util.Set.of(role));
         return UserResponse.from(userRepository.save(user));
     }
 }

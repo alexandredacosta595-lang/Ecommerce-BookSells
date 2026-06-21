@@ -92,4 +92,3 @@ Certifique-se de ter instalado em sua máquina:
    npm run dev
    ```
    > Acesse a aplicação no seu navegador através de `http://localhost:3000`.
-

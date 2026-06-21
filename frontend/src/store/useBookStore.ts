@@ -60,6 +60,7 @@ interface BookState {
   createOrder: (payload: Parameters<typeof orderService.createOrder>[0]) => Promise<Order>;
   updateOrderStatus: (orderId: string, status: Order['status']) => Promise<void>;
   refreshOrders: () => Promise<void>;
+  clearUserData: () => void;
 
   addBook: (book: Omit<Book, 'id'>) => Promise<void>;
   updateBook: (id: string, updated: Partial<Book>) => Promise<void>;
@@ -229,6 +230,10 @@ export const useBookStore = create<BookState>((set, get) => ({
     set({ orders });
   },
 
+  clearUserData: () => {
+    set({ wishlist: [], library: [], orders: [] });
+  },
+
   addBook: async (newBookData) => {
     const book = await bookService.createBook(newBookData);
     set((state) => ({ books: [book, ...state.books] }));
@@ -241,6 +246,8 @@ export const useBookStore = create<BookState>((set, get) => ({
     set((state) => ({
       books: state.books.map((b) => (b.id === id ? book : b)),
     }));
+    const categories = await bookService.getCategories();
+    set({ categories });
   },
 
   deleteBook: async (id) => {

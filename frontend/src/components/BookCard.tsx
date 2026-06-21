@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Book } from '../types';
 import { useCartStore } from '../store/useCartStore';
 import { useBookStore } from '../store/useBookStore';
+import { useAuthStore } from '../store/useAuthStore';
 import { useNotificationStore } from '../store/useNotificationStore';
 import RatingComponent from './RatingComponent';
 import { ShoppingCart, Heart, BookOpen, Layers } from 'lucide-react';
@@ -16,6 +17,7 @@ interface BookCardProps {
 export default function BookCard({ book }: BookCardProps) {
   const addItem = useCartStore((state) => state.addItem);
   const { toggleWishlist, isInWishlist, authors } = useBookStore();
+  const user = useAuthStore((state) => state.user);
   const showToast = useNotificationStore((state) => state.showToast);
 
   const isFav = isInWishlist(book.id);
@@ -88,20 +90,24 @@ export default function BookCard({ book }: BookCardProps) {
             <div className="absolute top-0 bottom-0 left-2.5 w-1 bg-white/5 z-10" />
 
             {/* Dynamic visual placeholder cover if image loads or doesn't */}
-            <div className="relative z-10 p-6 flex flex-col justify-between h-full w-full text-white text-center">
-              <span className="text-[9px] font-semibold tracking-widest text-zinc-300 dark:text-zinc-200 uppercase self-center max-w-[90%] truncate">
-                {author ? author.name : 'Editora Mulemba'}
-              </span>
-              <div className="flex flex-col gap-2 items-center my-auto px-1">
-                <span className="font-serif font-bold text-sm leading-tight line-clamp-3 text-white">
-                  {book.title}
+            {book.coverImage ? (
+              <img src={book.coverImage} alt={book.title} className="absolute inset-0 h-full w-full object-cover z-0" />
+            ) : (
+              <div className="relative z-10 p-6 flex flex-col justify-between h-full w-full text-white text-center">
+                <span className="text-[9px] font-semibold tracking-widest text-zinc-300 dark:text-zinc-200 uppercase self-center max-w-[90%] truncate">
+                  {author ? author.name : book.authorId || 'Editora Mulemba'}
                 </span>
-                <span className="h-0.5 w-8 bg-amber-400 rounded" />
+                <div className="flex flex-col gap-2 items-center my-auto px-1">
+                  <span className="font-serif font-bold text-sm leading-tight line-clamp-3 text-white">
+                    {book.title}
+                  </span>
+                  <span className="h-0.5 w-8 bg-amber-400 rounded" />
+                </div>
+                <span className="text-[8px] font-mono text-zinc-300 self-center">
+                  ISBN {book.isbn ? book.isbn.substring(4) : 'MULEMBA'}
+                </span>
               </div>
-              <span className="text-[8px] font-mono text-zinc-300 self-center">
-                ISBN {book.isbn ? book.isbn.substring(4) : 'MULEMBA'}
-              </span>
-            </div>
+            )}
 
             {/* Floating format indicators */}
             <div className="absolute bottom-2 right-2 z-10 flex gap-1">
@@ -149,7 +155,7 @@ export default function BookCard({ book }: BookCardProps) {
             </h3>
           </Link>
           <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
-            by {author ? author.name : 'Unknown Author'}
+            by {author ? author.name : book.authorId || 'Unknown Author'}
           </p>
 
           <div className="mt-2.5">
@@ -166,13 +172,23 @@ export default function BookCard({ book }: BookCardProps) {
             </span>
           </div>
 
-          <button
-            onClick={handleAddToCart}
-            className="flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm ring-1 ring-blue-500/25 transition-all duration-150 hover:bg-blue-700 hover:shadow-md hover:scale-102 active:scale-98 cursor-pointer"
-          >
-            <ShoppingCart className="h-3.5 w-3.5" />
-            <span>Comprar</span>
-          </button>
+          {book.sellerId === user?.id ? (
+            <Link
+              to="/dashboard"
+              state={{ defaultTab: 'seller-portal' }}
+              className="flex items-center justify-center rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-2 text-[11px] font-bold text-amber-700 hover:bg-amber-100 transition-all cursor-pointer dark:bg-amber-950/30 dark:border-amber-800/50 dark:text-amber-500"
+            >
+              Meu Anúncio
+            </Link>
+          ) : (
+            <button
+              onClick={handleAddToCart}
+              className="flex items-center justify-center gap-1.5 rounded-xl bg-blue-600 px-3.5 py-2 text-xs font-semibold text-white shadow-sm ring-1 ring-blue-500/25 transition-all duration-150 hover:bg-blue-700 hover:shadow-md hover:scale-102 active:scale-98 cursor-pointer"
+            >
+              <ShoppingCart className="h-3.5 w-3.5" />
+              <span>Comprar</span>
+            </button>
+          )}
         </div>
       </div>
     </motion.div>

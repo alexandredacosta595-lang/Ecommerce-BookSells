@@ -88,10 +88,14 @@ export default function CartPage() {
             >
               {/* Cover mini thumbnail */}
               <div className="flex items-center gap-4.5 w-full sm:w-auto">
-                <div className={`h-16 w-12 rounded bg-gradient-to-br ${item.book.coverColor} flex-shrink-0 relative overflow-hidden flex items-center justify-center text-white font-serif font-bold text-[8px] shadow-sm`}>
-                  <div className="absolute top-0 bottom-0 left-0 w-1 bg-black/10" />
-                  COV
-                </div>
+                {item.book.coverImage ? (
+                  <img src={item.book.coverImage} alt={item.book.title} className="h-16 w-12 rounded object-cover flex-shrink-0 shadow-sm border border-zinc-200 dark:border-zinc-800" />
+                ) : (
+                  <div className={`h-16 w-12 rounded bg-gradient-to-br ${item.book.coverColor} flex-shrink-0 relative overflow-hidden flex items-center justify-center text-white font-serif font-bold text-[8px] shadow-sm`}>
+                    <div className="absolute top-0 bottom-0 left-0 w-1 bg-black/10" />
+                    COV
+                  </div>
+                )}
                 <div className="overflow-hidden flex-1 sm:flex-initial">
                   <Link to={`/book/${item.bookId}`} className="hover:text-blue-600 block">
                     <h4 className="font-bold text-sm text-zinc-909 dark:text-zinc-50 truncate leading-tight">

@@ -7,7 +7,7 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 @Entity
-@Table(name = "reviews")
+@Table(name = "avaliacoes")
 @Getter
 @Setter
 @NoArgsConstructor

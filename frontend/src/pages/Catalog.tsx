@@ -68,8 +68,8 @@ export default function Catalog() {
       matchedType = book.formats.includes('pdf') || book.formats.includes('epub');
     }
 
-    // 5. Price Range
-    const matchedPrice = book.price >= priceRange[0] && book.price <= priceRange[1];
+    // 5. Price Limit Removed completely
+    const matchedPrice = true;
 
     // 6. Rating
     const matchedRating = book.rating >= minRating;
@@ -106,9 +106,7 @@ export default function Catalog() {
   };
 
   const handlePriceChange = (index: 0 | 1, val: number) => {
-    const newRange = [...priceRange] as [number, number];
-    newRange[index] = val;
-    setPriceRange(newRange);
+    // Deprecated: No price limits
   };
 
   const FiltersContent = () => (
@@ -211,41 +209,7 @@ export default function Catalog() {
         </select>
       </div>
 
-      {/* Price Limit Slider range values */}
-      <div>
-        <div className="flex items-center justify-between">
-          <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-550 font-mono">
-            Faixa de Preço
-          </h4>
-          <span className="text-xs font-bold text-zinc-900 dark:text-zinc-300 font-mono">
-            Kz {priceRange[0]} - Kz {priceRange[1]}
-          </span>
-        </div>
-        <div className="mt-3.5 space-y-2">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] text-zinc-450 font-semibold font-mono">Mín</span>
-            <input
-              type="range"
-              min="0"
-              max="60"
-              value={priceRange[0]}
-              onChange={(e) => handlePriceChange(0, parseInt(e.target.value))}
-              className="w-full text-blue-600 cursor-pointer h-1.5 bg-zinc-200 rounded-lg appearance-none dark:bg-zinc-800 accent-blue-650"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] text-zinc-450 font-semibold font-mono">Máx</span>
-            <input
-              type="range"
-              min="0"
-              max="60"
-              value={priceRange[1]}
-              onChange={(e) => handlePriceChange(1, parseInt(e.target.value))}
-              className="w-full text-blue-600 cursor-pointer h-1.5 bg-zinc-200 rounded-lg appearance-none dark:bg-zinc-800 accent-blue-650"
-            />
-          </div>
-        </div>
-      </div>
+      {/* Price Limit Slider range values - Removed per user request */}
 
       {/* Rating scale minimum value stars */}
       <div>
@@ -294,7 +258,7 @@ export default function Catalog() {
           <span className="text-xs font-extrabold uppercase tracking-widest text-blue-605 dark:text-blue-400 font-mono">Catálogo Completo</span>
           <h1 className="text-3xl font-bold text-zinc-909 dark:text-zinc-50 mt-1">Explorar Publicações</h1>
           <p className="text-sm text-zinc-500 mt-1">
-            Descubra {filteredBooks.length} obras excepcionais que combinam com seus critérios.
+            Descubra obras excepcionais que combinam com o seu gosto literário.
           </p>
         </div>
 

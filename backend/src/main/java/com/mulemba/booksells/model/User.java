@@ -1,15 +1,16 @@
 package com.mulemba.booksells.model;
 
-import com.mulemba.booksells.model.enums.UserRole;
 import com.mulemba.booksells.model.enums.UserType;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 @Entity
-@Table(name = "users")
+@Table(name = "utilizadores")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -30,9 +31,13 @@ public class User {
     @Column(nullable = false)
     private String password;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private UserRole role;
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "utilizadores_perfis",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "role_id")
+    )
+    private Set<Role> roles = new HashSet<>();
 
     @Enumerated(EnumType.STRING)
     private UserType userType;

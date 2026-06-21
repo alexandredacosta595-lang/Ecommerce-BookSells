@@ -105,8 +105,9 @@ export const bookService = {
         'Content-Type': 'multipart/form-data',
       },
     });
-    // The backend returns '/uploads/filename.ext'. We return this to save in the book.
-    return data.url;
+    // Convert relative URL to absolute URL targeting the API server
+    const baseURL = api.defaults.baseURL?.replace('/api', '') || 'http://localhost:8080';
+    return `${baseURL}${data.url}`;
   },
 };
 
@@ -169,6 +170,7 @@ function mapBookToRequest(book: Partial<Book>) {
     newRelease: book.newRelease,
     isbn: book.isbn,
     publisher: book.publisher,
+    sellerId: book.sellerId,
     sellerType: book.sellerType?.toUpperCase(),
     sellerName: book.sellerName,
     condition: book.condition?.toUpperCase(),

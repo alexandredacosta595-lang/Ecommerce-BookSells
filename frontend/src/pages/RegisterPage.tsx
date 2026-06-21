@@ -55,7 +55,7 @@ export default function RegisterPage() {
       });
 
       const successMessage = userType === 'reader'
-        ? `Bem-vindo a bordo, ${name}! Explore novos livros e anuncie seus livros usados.`
+        ? `Bem-vindo a bordo, ${name}! Explore novos livros e descubra grandes obras.`
         : userType === 'bookstore'
         ? `Livraria "${companyName || name}" cadastrada com sucesso!`
         : userType === 'publisher'
@@ -136,23 +136,11 @@ export default function RegisterPage() {
                   }`}
                 >
                   <UserCheck className="h-5 w-5 mb-1.5 text-blue-500" />
-                  <span className="text-xs font-bold block">Apenas Leitor</span>
-                  <span className="text-[9px] text-zinc-400 font-mono mt-0.5 leading-tight font-medium">Só pode comprar e ler, não cria livros</span>
+                  <span className="text-xs font-bold block">Leitor</span>
+                  <span className="text-[9px] text-zinc-400 font-mono mt-0.5 leading-tight font-medium">Só pode comprar e ler, não cadastra livros</span>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => setUserType('bookstore')}
-                  className={`flex flex-col items-start p-3 rounded-xl border text-left cursor-pointer transition-all ${
-                    userType === 'bookstore'
-                      ? 'border-blue-600 bg-blue-50/20 text-blue-600 dark:border-blue-500'
-                      : 'border-zinc-200 hover:border-zinc-300 text-zinc-650 bg-white dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300'
-                  }`}
-                >
-                  <Store className="h-5 w-5 mb-1.5 text-blue-500" />
-                  <span className="text-xs font-bold block">Livraria de Bairro</span>
-                  <span className="text-[9px] text-zinc-400 font-mono mt-0.5 leading-tight font-medium">Sebos e lojas físicas</span>
-                </button>
+
 
                 <button
                   type="button"
@@ -243,7 +231,7 @@ export default function RegisterPage() {
                     type="text"
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
-                    placeholder="São Paulo ou RJ"
+                    placeholder="Luanda"
                     className="w-full rounded-xl border border-zinc-250 bg-white px-3 py-2 pl-9 text-xs text-zinc-900 outline-none focus:border-blue-600 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
                   />
                   <MapPin className="absolute left-3 h-4 w-4 text-zinc-350" />
@@ -251,13 +239,13 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label className="text-[10px] text-zinc-500 font-bold font-mono uppercase block mb-1">Estado / UF</label>
+                <label className="text-[10px] text-zinc-500 font-bold font-mono uppercase block mb-1">Província</label>
                 <input
                   type="text"
                   maxLength={2}
                   value={state}
                   onChange={(e) => setState(e.target.value.toUpperCase())}
-                  placeholder="SP"
+                  placeholder="LUA"
                   className="w-full rounded-xl border border-zinc-250 bg-white px-3 py-2 text-center text-xs text-zinc-900 outline-none focus:border-blue-600 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
                 />
               </div>
@@ -270,7 +258,7 @@ export default function RegisterPage() {
                   type="text"
                   value={whatsapp}
                   onChange={(e) => setWhatsapp(e.target.value)}
-                  placeholder="+55 (11) 99999-9999"
+                  placeholder="+244 923 456 789"
                   className="w-full rounded-xl border border-zinc-250 bg-white px-3 py-2 pl-9 text-xs text-zinc-900 outline-none focus:border-blue-600 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
                 />
                 <MessageSquare className="absolute left-3 h-4 w-4 text-zinc-350" />
@@ -284,6 +272,7 @@ export default function RegisterPage() {
                   <input
                     type="password"
                     required
+                    minLength={8}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Mínimo de 8 caracteres..."
@@ -299,6 +288,7 @@ export default function RegisterPage() {
                   <input
                     type="password"
                     required
+                    minLength={8}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Repita a senha..."

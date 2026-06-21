@@ -58,6 +58,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   logout: () => {
     authService.logout();
+    import('./useBookStore').then(m => m.useBookStore.getState().clearUserData());
     set({ user: null, isAuthenticated: false });
   },
 

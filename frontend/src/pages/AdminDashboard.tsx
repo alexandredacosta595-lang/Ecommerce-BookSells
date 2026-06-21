@@ -84,8 +84,8 @@ export default function AdminDashboard() {
   const [formTitle, setFormTitle] = useState('');
   const [formDescription, setFormDescription] = useState('');
   const [formPrice, setFormPrice] = useState(19.99);
-  const [formCategoryId, setFormCategoryId] = useState('cat-1');
-  const [formAuthorId, setFormAuthorId] = useState('aut-1');
+  const [formCategoryId, setFormCategoryId] = useState('');
+  const [formAuthorId, setFormAuthorId] = useState('');
   const [formPages, setFormPages] = useState(300);
   const [formStock, setFormStock] = useState(50);
   const [formType, setFormType] = useState<'physical' | 'digital' | 'both'>('both');
@@ -102,8 +102,8 @@ export default function AdminDashboard() {
     setFormTitle('');
     setFormDescription('');
     setFormPrice(19.99);
-    setFormCategoryId('cat-1');
-    setFormAuthorId('aut-1');
+    setFormCategoryId(categories.length > 0 ? categories[0].id : '');
+    setFormAuthorId(authors.length > 0 ? authors[0].id : '');
     setFormPages(300);
     setFormStock(50);
     setFormType('both');
@@ -433,10 +433,14 @@ export default function AdminDashboard() {
                   {bookList.map((b) => (
                     <tr key={b.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-850/20">
                       <td className="px-5 py-3.5 flex items-center gap-3">
-                        <div className={`h-11 w-8 rounded bg-gradient-to-br ${b.coverColor} flex-shrink-0 relative overflow-hidden flex items-center justify-center text-white font-serif font-bold text-[6px] shadow-sm`}>
-                          <div className="absolute top-0 bottom-0 left-0 w-0.5 bg-black/10" />
-                          BOV
-                        </div>
+                        {b.coverImage ? (
+                          <img src={b.coverImage} alt={b.title} className="h-11 w-8 rounded object-cover flex-shrink-0 shadow-sm border border-zinc-200 dark:border-zinc-800" />
+                        ) : (
+                          <div className={`h-11 w-8 rounded bg-gradient-to-br ${b.coverColor} flex-shrink-0 relative overflow-hidden flex items-center justify-center text-white font-serif font-bold text-[6px] shadow-sm`}>
+                            <div className="absolute top-0 bottom-0 left-0 w-0.5 bg-black/10" />
+                            BOV
+                          </div>
+                        )}
                         <div className="overflow-hidden">
                           <span className="font-bold text-zinc-850 dark:text-zinc-50 block leading-tight truncate max-w-xs">{b.title}</span>
                           <span className="text-[10px] text-zinc-440 block font-mono mt-0.5">ISBN: {b.isbn || 'N/A'}</span>

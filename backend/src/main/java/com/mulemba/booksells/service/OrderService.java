@@ -23,8 +23,8 @@ import java.util.List;
 public class OrderService {
 
     private static final BigDecimal TAX_RATE = new BigDecimal("0.08");
-    private static final BigDecimal SHIPPING_FEE = new BigDecimal("4.99");
-    private static final BigDecimal FREE_SHIPPING_THRESHOLD = new BigDecimal("50");
+    private static final BigDecimal SHIPPING_FEE = new BigDecimal("2000");
+    private static final BigDecimal FREE_SHIPPING_THRESHOLD = new BigDecimal("50000");
 
     private final OrderRepository orderRepository;
     private final BookService bookService;

@@ -103,10 +103,14 @@ export default function SearchBar() {
                 onClick={() => handleSuggestClick(book.id)}
                 className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-zinc-50 dark:hover:bg-zinc-850 transition-colors"
               >
-                <div className={`h-10 w-8.5 rounded bg-gradient-to-br ${book.coverColor} flex-shrink-0 relative overflow-hidden flex items-center justify-center text-white font-serif font-bold text-[6px] shadow-sm`}>
-                  <div className="absolute top-0 bottom-0 left-0 w-0.5 bg-black/10" />
-                  COV
-                </div>
+                {book.coverImage ? (
+                  <img src={book.coverImage} alt={book.title} className="h-10 w-8.5 rounded object-cover flex-shrink-0 shadow-sm border border-zinc-200 dark:border-zinc-800" />
+                ) : (
+                  <div className={`h-10 w-8.5 rounded bg-gradient-to-br ${book.coverColor} flex-shrink-0 relative overflow-hidden flex items-center justify-center text-white font-serif font-bold text-[6px] shadow-sm`}>
+                    <div className="absolute top-0 bottom-0 left-0 w-0.5 bg-black/10" />
+                    COV
+                  </div>
+                )}
                 <div className="flex-1 overflow-hidden">
                   <h4 className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100 leading-tight">
                     {book.title}

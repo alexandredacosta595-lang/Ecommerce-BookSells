@@ -7,7 +7,7 @@ import java.math.BigDecimal;
 import java.util.UUID;
 
 @Entity
-@Table(name = "promo_codes")
+@Table(name = "codigos_promocionais")
 @Getter
 @Setter
 @NoArgsConstructor

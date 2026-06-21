@@ -1,6 +1,6 @@
 package com.mulemba.booksells.dto;
 
-import com.mulemba.booksells.model.enums.UserRole;
+import com.mulemba.booksells.model.Role;
 import com.mulemba.booksells.model.enums.UserType;
 
 public record UserResponse(
@@ -20,11 +20,13 @@ public record UserResponse(
         String website
 ) {
     public static UserResponse from(com.mulemba.booksells.model.User user) {
+        boolean isAdmin = user.getRoles().stream().anyMatch(r -> r.getName().equals("ROLE_ADMIN"));
+        
         return new UserResponse(
                 user.getId(),
                 user.getName(),
                 user.getEmail(),
-                user.getRole() == UserRole.ADMIN ? "admin" : "user",
+                isAdmin ? "admin" : "user",
                 user.getAvatar(),
                 user.getMemberSince().toString(),
                 user.getBio(),

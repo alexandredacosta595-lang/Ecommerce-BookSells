@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { PixelService } from '../services/PixelService';
 import { useCartStore } from '../store/useCartStore';
 import { useBookStore } from '../store/useBookStore';
 import { useAuthStore } from '../store/useAuthStore';
@@ -76,6 +77,14 @@ export default function CheckoutPage() {
         shippingAddress: { fullName, street, city, state, zipCode, country, phone },
       });
 
+      // TRACK PURCHASE EVENT
+      PixelService.track('purchase', {
+        orderId: order.id,
+        total,
+        currency: 'AOA',
+        items: items.length
+      });
+
       clearCart();
       showToast(`Pagamento aprovado! Pedido realizado com sucesso! ID: ${order.id}`, 'success', 5000);
       navigate('/dashboard', { state: { defaultTab: 'orders' } });
@@ -149,7 +158,7 @@ export default function CheckoutPage() {
                   required
                   value={street}
                   onChange={(e) => setStreet(e.target.value)}
-                  placeholder="Rua das Acácias, 100"
+                  placeholder="Rua Conselheiro Júlio de Vilhena, nº 10"
                   className="w-full rounded-xl border border-zinc-250 bg-white px-3.5 py-2.5 text-xs text-zinc-900 outline-none focus:border-blue-600 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
                 />
               </div>
@@ -161,30 +170,32 @@ export default function CheckoutPage() {
                   required
                   value={city}
                   onChange={(e) => setCity(e.target.value)}
-                  placeholder="São Paulo"
+                  placeholder="Luanda"
                   className="w-full rounded-xl border border-zinc-250 bg-white px-3.5 py-2.5 text-xs text-zinc-900 outline-none focus:border-blue-600 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
                 />
               </div>
 
               <div>
-                <label className="text-xs text-zinc-500 font-bold font-mono uppercase block mb-1">Estado (UF) *</label>
+                <label className="text-xs text-zinc-500 font-bold font-mono uppercase block mb-1">Província *</label>
                 <input
                   type="text"
                   value={state}
                   onChange={(e) => setState(e.target.value)}
-                  placeholder="SP"
+                  placeholder="Luanda"
                   className="w-full rounded-xl border border-zinc-250 bg-white px-3.5 py-2.5 text-xs text-zinc-900 outline-none focus:border-blue-600 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
                 />
               </div>
 
               <div>
-                <label className="text-xs text-zinc-500 font-bold font-mono uppercase block mb-1">CEP *</label>
+                <label className="text-xs text-zinc-500 font-bold font-mono uppercase block mb-1">Código Postal (Opcional)</label>
                 <input
                   type="text"
                   required
                   value={zipCode}
                   onChange={(e) => setZipCode(e.target.value)}
-                  placeholder="01311-100"
+                  placeholder="0000"
+                  pattern="^[\d\-A-Z]{4,10}$"
+                  maxLength={10}
                   className="w-full rounded-xl border border-zinc-250 bg-white px-3.5 py-2.5 text-xs text-zinc-900 outline-none focus:border-blue-600 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
                 />
               </div>
@@ -196,7 +207,7 @@ export default function CheckoutPage() {
                   required
                   value={country}
                   onChange={(e) => setCountry(e.target.value)}
-                  placeholder="Brasil"
+                  placeholder="Angola"
                   className="w-full rounded-xl border border-zinc-250 bg-white px-3.5 py-2.5 text-xs text-zinc-900 outline-none focus:border-blue-600 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
                 />
               </div>
@@ -208,7 +219,7 @@ export default function CheckoutPage() {
                   required
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+55 (11) 99999-5555"
+                  placeholder="+244 923 456 789"
                   className="w-full rounded-xl border border-zinc-250 bg-white px-3.5 py-2.5 text-xs text-zinc-900 outline-none focus:border-blue-600 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
                 />
               </div>
@@ -267,6 +278,9 @@ export default function CheckoutPage() {
                     value={cardNumber}
                     onChange={(e) => setCardNumber(e.target.value)}
                     placeholder="4000 1234 5678 9010"
+                    pattern="[\d ]{16,19}"
+                    maxLength={19}
+                    title="Insira os 16 dígitos do seu cartão"
                     className="w-full rounded-xl border border-zinc-250 bg-white px-3.5 py-2.5 text-xs text-zinc-900 outline-none focus:border-blue-605 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
                   />
                 </div>
@@ -277,7 +291,10 @@ export default function CheckoutPage() {
                     required
                     value={cardExpiry}
                     onChange={(e) => setCardExpiry(e.target.value)}
-                    placeholder="11/29"
+                    placeholder="MM/AA"
+                    pattern="(0[1-9]|1[0-2])\/[0-9]{2}"
+                    maxLength={5}
+                    title="Formato: MM/AA"
                     className="w-full rounded-xl border border-zinc-250 bg-white px-3.5 py-2.5 text-xs text-zinc-900 outline-none focus:border-blue-605 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
                   />
                 </div>
@@ -288,7 +305,10 @@ export default function CheckoutPage() {
                     required
                     value={cardCvc}
                     onChange={(e) => setCardCvc(e.target.value)}
-                    placeholder="900"
+                    placeholder="123"
+                    pattern="[0-9]{3,4}"
+                    maxLength={4}
+                    title="Código de 3 ou 4 dígitos"
                     className="w-full rounded-xl border border-zinc-250 bg-white px-3.5 py-2.5 text-xs text-zinc-900 outline-none focus:border-blue-605 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
                   />
                 </div>
@@ -315,10 +335,14 @@ export default function CheckoutPage() {
               {items.map((i) => (
                 <div key={`${i.bookId}-${i.selectedFormat}`} className="flex items-center gap-3 justify-between border-b pb-2.5 last:border-b-0 dark:border-zinc-800">
                   <div className="flex items-center gap-2 overflow-hidden flex-1 select-none">
-                    <div className={`h-8 w-6 rounded bg-gradient-to-br ${i.book.coverColor} flex-shrink-0 relative overflow-hidden flex items-center justify-center text-white font-serif font-bold text-[5px] shadow-sm`}>
-                      <div className="absolute top-0 bottom-0 left-0 w-[1.5px] bg-black/10" />
-                      C
-                    </div>
+                    {i.book.coverImage ? (
+                      <img src={i.book.coverImage} alt={i.book.title} className="h-8 w-6 rounded object-cover flex-shrink-0 shadow-sm border border-zinc-200 dark:border-zinc-800" />
+                    ) : (
+                      <div className={`h-8 w-6 rounded bg-gradient-to-br ${i.book.coverColor} flex-shrink-0 relative overflow-hidden flex items-center justify-center text-white font-serif font-bold text-[5px] shadow-sm`}>
+                        <div className="absolute top-0 bottom-0 left-0 w-[1.5px] bg-black/10" />
+                        C
+                      </div>
+                    )}
                     <div className="overflow-hidden">
                       <h5 className="font-bold text-xs text-zinc-901 truncate">{i.book.title}</h5>
                       <span className="text-[9px] font-semibold text-zinc-405 dark:text-zinc-400 tracking-wider">

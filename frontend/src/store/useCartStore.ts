@@ -93,7 +93,7 @@ export const useCartStore = create<CartState>((set, get) => ({
     const discount = couponCode ? storedDiscount : 0;
     const hasPhysical = items.some((item) => item.selectedFormat === 'physical');
     const afterDiscount = Math.max(0, subtotal - discount);
-    const shipping = hasPhysical ? (afterDiscount >= 50 ? 0 : 4.99) : 0;
+    const shipping = hasPhysical ? (afterDiscount >= 50000 ? 0 : 2000) : 0;
     const tax = afterDiscount * 0.08;
     const total = afterDiscount + shipping + tax;
 

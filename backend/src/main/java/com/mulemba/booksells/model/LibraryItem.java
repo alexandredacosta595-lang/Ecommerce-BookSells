@@ -8,7 +8,7 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 @Entity
-@Table(name = "library_items", uniqueConstraints = {
+@Table(name = "itens_biblioteca", uniqueConstraints = {
         @UniqueConstraint(columnNames = {"user_id", "book_id"})
 })
 @Getter

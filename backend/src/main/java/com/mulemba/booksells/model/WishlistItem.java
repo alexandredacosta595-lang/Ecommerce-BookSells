@@ -6,7 +6,7 @@ import lombok.*;
 import java.util.UUID;
 
 @Entity
-@Table(name = "wishlist_items", uniqueConstraints = {
+@Table(name = "itens_lista_desejos", uniqueConstraints = {
         @UniqueConstraint(columnNames = {"user_id", "book_id"})
 })
 @Getter

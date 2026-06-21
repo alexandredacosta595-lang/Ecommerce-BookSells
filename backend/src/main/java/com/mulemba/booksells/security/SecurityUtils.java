@@ -22,6 +22,7 @@ public final class SecurityUtils {
     }
 
     public static boolean isAdmin() {
-        return getCurrentUser().getRole().name().equals("ADMIN");
+        return getCurrentUser().getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
     }
 }

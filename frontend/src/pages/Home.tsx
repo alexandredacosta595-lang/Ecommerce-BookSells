@@ -10,7 +10,7 @@ import { useCartStore } from '../store/useCartStore';
 import { BookOpen, ArrowRight, ShieldCheck, Mail, Sparkles, BookMarked, Globe } from 'lucide-react';
 
 export default function Home() {
-  const { books, categories, setSelectedCategoryId } = useBookStore();
+  const { books, categories, setSelectedCategoryId, reviews } = useBookStore();
   const showToast = useNotificationStore((state) => state.showToast);
   const addItem = useCartStore((state) => state.addItem);
   const navigate = useNavigate();
@@ -37,12 +37,14 @@ export default function Home() {
   };
 
   const handleFastBuyHero = () => {
-    // Find Book 1 (The Echo of Silent Waves) and add ePUB format to cart, then navigate to details or cart
-    const echoBook = books.find((b) => b.id === 'book-1');
-    if (echoBook) {
-      addItem(echoBook, 'epub');
-      showToast(`Adicionado "${echoBook.title}" (EPUB) ao seu carrinho!`, 'success');
+    // Find the first book that has the 'epub' format
+    const epubBook = books.find((b) => b.formats.includes('epub'));
+    if (epubBook) {
+      addItem(epubBook, 'epub');
+      showToast(`Adicionado "${epubBook.title}" (EPUB) ao seu carrinho!`, 'success');
       navigate('/cart');
+    } else {
+      showToast('Nenhum livro ePUB disponível no momento.', 'info');
     }
   };
 
@@ -185,6 +187,7 @@ export default function Home() {
       </section>
 
       {/* 6. CUSTOMER REVIEWS */}
+      {reviews && reviews.length > 0 && (
       <section className="space-y-6" id="section-reviews">
         <div className="text-center max-w-xl mx-auto">
           <span className="text-xs font-extrabold uppercase tracking-widest text-blue-600 dark:text-blue-400 font-mono">Depoimentos dos Leitores</span>
@@ -192,58 +195,25 @@ export default function Home() {
         </div>
         
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-          <div className="rounded-2xl border border-zinc-150 p-6 bg-white dark:bg-zinc-900 dark:border-zinc-800 shadow-sm flex flex-col justify-between">
-            <p className="text-sm italic text-zinc-650 dark:text-zinc-350 leading-relaxed">
-              "O livro Sovereign Balance Sheet é excepcionalmente detalhado. Ler cópias físicas e PDFs digitais durante as viagens tem sido maravilhoso."
-            </p>
-            <div className="flex items-center gap-3 mt-4 border-t border-zinc-100 dark:border-zinc-805 pt-3">
-              <img
-                src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100&auto=format&fit=crop&q=80"
-                alt="Reviewer"
-                className="h-9 w-9 rounded-full object-cover"
-              />
-              <div>
-                <h4 className="font-bold text-xs text-zinc-900 dark:text-zinc-100">Clarissa Fontaine</h4>
-                <div className="mt-0.5"><RatingComponent rating={5} size="xs" /></div>
+          {reviews.slice(0, 3).map((review) => (
+            <div key={review.id} className="rounded-2xl border border-zinc-150 p-6 bg-white dark:bg-zinc-900 dark:border-zinc-800 shadow-sm flex flex-col justify-between">
+              <p className="text-sm italic text-zinc-650 dark:text-zinc-350 leading-relaxed">
+                "{review.comment}"
+              </p>
+              <div className="flex items-center gap-3 mt-4 border-t border-zinc-100 dark:border-zinc-805 pt-3">
+                <div className="h-9 w-9 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 font-bold dark:bg-amber-900/30 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50">
+                  {review.userName.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <h4 className="font-bold text-xs text-zinc-900 dark:text-zinc-100">{review.userName}</h4>
+                  <div className="mt-0.5"><RatingComponent rating={review.rating} size="xs" /></div>
+                </div>
               </div>
             </div>
-          </div>
-
-          <div className="rounded-2xl border border-zinc-150 p-6 bg-white dark:bg-zinc-900 dark:border-zinc-805 shadow-sm flex flex-col justify-between">
-            <p className="text-sm italic text-zinc-650 dark:text-zinc-350 leading-relaxed">
-              "As canções de amor da nossa terra e os romances clássicos me prenderam logo no primeiro capítulo. A Livraria Mulemba oferece downloads instantâneos em ePUB que rodam perfeitamente no tablet."
-            </p>
-            <div className="flex items-center gap-3 mt-4 border-t border-zinc-100 dark:border-zinc-800 pt-3">
-              <img
-                src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&auto=format&fit=crop&q=80"
-                alt="Reviewer"
-                className="h-9 w-9 rounded-full object-cover"
-              />
-              <div>
-                <h4 className="font-bold text-xs text-zinc-900 dark:text-zinc-100">Siddharth Iyer</h4>
-                <div className="mt-0.5"><RatingComponent rating={5} size="xs" /></div>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-zinc-150 p-6 bg-white dark:bg-zinc-900 dark:border-zinc-800 shadow-sm flex flex-col justify-between">
-            <p className="text-sm italic text-zinc-650 dark:text-zinc-350 leading-relaxed">
-              "Eu adoro os guias de tecnologia. Os exercícios cognitivos de reprogramação neural mantêm meu nível de foco consistente. Interface minimalista e linda."
-            </p>
-            <div className="flex items-center gap-3 mt-4 border-t border-zinc-100 dark:border-zinc-805 pt-3">
-              <img
-                src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
-                alt="Reviewer"
-                className="h-9 w-9 rounded-full object-cover"
-              />
-              <div>
-                <h4 className="font-bold text-xs text-zinc-905 dark:text-zinc-100">Sarah Jenkins</h4>
-                <div className="mt-0.5"><RatingComponent rating={5} size="xs" /></div>
-              </div>
-            </div>
-          </div>
+          ))}
         </div>
       </section>
+      )}
 
       {/* 7. NEWSLETTER STANDALONE BANNER */}
       <section className="rounded-3xl bg-gradient-to-br from-blue-600 to-indigo-800 text-white p-8 md:p-12 text-center relative overflow-hidden shadow-lg" id="newsletter-subscription-box">

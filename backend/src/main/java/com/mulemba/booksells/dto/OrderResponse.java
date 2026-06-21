@@ -9,7 +9,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 public record OrderResponse(
-
+        String id,
         String userId,
         List<OrderItemResponse> items,
         BigDecimal total,
@@ -26,7 +26,7 @@ public record OrderResponse(
 ) {
     public static OrderResponse from(Order order) {
         return new OrderResponse(
-
+                order.getId(),
                 order.getUserId(),
                 order.getItems().stream().map(OrderItemResponse::from).toList(),
                 order.getTotal(),

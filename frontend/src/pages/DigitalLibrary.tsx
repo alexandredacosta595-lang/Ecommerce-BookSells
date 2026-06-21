@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useBookStore } from '../store/useBookStore';
 import { useNotificationStore } from '../store/useNotificationStore';
 import { useNavigate } from 'react-router-dom';
@@ -36,23 +36,65 @@ export default function DigitalLibrary() {
   const [readerCurrentPage, setReaderCurrentPage] = useState(1);
   const [fontSize, setFontSize] = useState<'sm' | 'base' | 'lg' | 'xl'>('base');
 
-  const activeDownloads = (bId: string) => {
-    setDownloadingBookId(bId);
-    setDownloadProgress(0);
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Bloqueia teclas comuns de atalho para prints e salvar
+      if (e.key === 'PrintScreen' || (e.ctrlKey && (e.key === 'p' || e.key === 's')) || (e.metaKey && (e.key === 'p' || e.key === 's' || e.shiftKey))) {
+        e.preventDefault();
+        navigator.clipboard.writeText(''); 
+        showToast.showToast('Capturas de ecrã não são permitidas por direitos autorais.', 'error');
+      }
+    };
+
+    // Ofusca o conteúdo do leitor quando a janela perde o foco (ex: ferramenta de captura ativada)
+    const handleBlur = () => {
+      const readerBody = document.getElementById('virtual-epub-reader-body');
+      if (readerBody) {
+        readerBody.style.filter = 'blur(10px)';
+        readerBody.style.opacity = '0.5';
+      }
+    };
+
+    const handleFocus = () => {
+      const readerBody = document.getElementById('virtual-epub-reader-body');
+      if (readerBody) {
+        readerBody.style.filter = 'none';
+        readerBody.style.opacity = '1';
+      }
+    };
     
-    // Simulate active download speeds
-    const interval = setInterval(() => {
-      setDownloadProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setDownloadingBookId(null);
-          downloadFormat(bId);
-          showToast.showToast('Livro baixado com sucesso para o cache offline do dispositivo!', 'success');
-          return 100;
+    // Add print blocking styles
+    const style = document.createElement('style');
+    style.innerHTML = `
+      @media print {
+        #virtual-epub-reader-body {
+          display: none !important;
         }
-        return prev + 20; // 20% increases
-      });
-    }, 280);
+      }
+      ::selection {
+        background: transparent;
+        color: inherit;
+      }
+    `;
+    document.head.appendChild(style);
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyDown);
+    window.addEventListener('blur', handleBlur);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyDown);
+      window.removeEventListener('blur', handleBlur);
+      window.removeEventListener('focus', handleFocus);
+      document.head.removeChild(style);
+    };
+  }, [showToast]);
+
+  // Deprecated: Downloads are blocked completely.
+  const activeDownloads = (bId: string) => {
+    showToast.showToast('O download de e-books não é permitido.', 'error');
   };
 
   const handleOpenReader = (bId: string, currentProgress: number) => {
@@ -165,36 +207,25 @@ export default function DigitalLibrary() {
                 <Play className="h-4 w-4 fill-current" /> Abrir Leitor Digital
               </button>
               
-              {!continueReadingItem.downloaded ? (
-                <button
-                  type="button"
-                  onClick={() => activeDownloads(continueBook.id)}
-                  disabled={downloadingBookId === continueBook.id}
-                  className="rounded-xl border border-zinc-250 hover:bg-zinc-100 px-5 py-2.5 text-xs font-bold inline-flex items-center justify-center gap-1.5 text-zinc-850 cursor-pointer dark:border-zinc-800 dark:bg-zinc-900"
-                >
-                  {downloadingBookId === continueBook.id ? (
-                    <span className="animate-pulse">Baixando {downloadProgress}%</span>
-                  ) : (
-                    <><Download className="h-4 w-4 text-emerald-555" /> Salvar Offline</>
-                  )}
-                </button>
-              ) : (
-                <span className="inline-flex items-center gap-1.5 text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40 rounded-xl px-4 py-2.5 text-xs font-bold leading-none select-none">
-                  <CheckCircle className="h-4 w-4" /> Disponível Offline
-                </span>
-              )}
+              <span className="inline-flex items-center gap-1.5 text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40 rounded-xl px-4 py-2.5 text-[10px] uppercase font-bold leading-none select-none tracking-wider font-mono">
+                <CheckCircle className="h-4 w-4" /> Somente Leitura na Web
+              </span>
             </div>
           </div>
 
           {/* Floated Graphic layout */}
           <div className="md:col-span-4 flex justify-center md:justify-end">
-            <div className={`h-40 w-28.5 rounded-2xl bg-gradient-to-br ${continueBook.coverColor} relative overflow-hidden flex flex-col justify-between p-4 text-white shadow-xl border border-white/5 font-serif`}>
-              <div className="absolute top-0 bottom-0 left-0 w-2 bg-black/10" />
-              <div className="absolute top-0 bottom-0 left-2 w-0.5 bg-white/5" />
-              <span className="text-[8px] font-mono text-zinc-300 uppercase self-center tracking-widest text-center truncate w-full">Capa do Livro</span>
-              <span className="font-bold text-xs text-center leading-tight line-clamp-3 my-auto">{continueBook.title}</span>
-              <span className="text-[8px] font-mono text-zinc-400 self-center">PROGRESSO</span>
-            </div>
+            {continueBook.coverImage ? (
+              <img src={continueBook.coverImage} alt={continueBook.title} className="h-40 w-28.5 rounded-2xl object-cover shadow-xl border border-zinc-200 dark:border-zinc-800" />
+            ) : (
+              <div className={`h-40 w-28.5 rounded-2xl bg-gradient-to-br ${continueBook.coverColor} relative overflow-hidden flex flex-col justify-between p-4 text-white shadow-xl border border-white/5 font-serif`}>
+                <div className="absolute top-0 bottom-0 left-0 w-2 bg-black/10" />
+                <div className="absolute top-0 bottom-0 left-2 w-0.5 bg-white/5" />
+                <span className="text-[8px] font-mono text-zinc-300 uppercase self-center tracking-widest text-center truncate w-full">Capa do Livro</span>
+                <span className="font-bold text-xs text-center leading-tight line-clamp-3 my-auto">{continueBook.title}</span>
+                <span className="text-[8px] font-mono text-zinc-400 self-center">PROGRESSO</span>
+              </div>
+            )}
           </div>
         </section>
       )}
@@ -215,26 +246,20 @@ export default function DigitalLibrary() {
               >
                 <div className="flex items-start gap-4 justify-between">
                   <div className="flex items-center gap-3 overflow-hidden flex-1 select-none">
-                    <div className={`h-14 w-10.5 rounded bg-gradient-to-br ${b.coverColor} relative overflow-hidden flex items-center justify-center text-white font-serif font-bold text-[7px] shadow-sm`}>
-                      <div className="absolute top-0 bottom-0 left-0 w-0.5 bg-white/5" />
-                      COV
-                    </div>
+                    {b.coverImage ? (
+                      <img src={b.coverImage} alt={b.title} className="h-14 w-10.5 rounded object-cover shadow-sm border border-zinc-200 dark:border-zinc-800" />
+                    ) : (
+                      <div className={`h-14 w-10.5 rounded bg-gradient-to-br ${b.coverColor} relative overflow-hidden flex items-center justify-center text-white font-serif font-bold text-[7px] shadow-sm`}>
+                        <div className="absolute top-0 bottom-0 left-0 w-0.5 bg-white/5" />
+                        COV
+                      </div>
+                    )}
                     <div className="overflow-hidden">
                       <h4 className="font-bold text-xs text-zinc-901 dark:text-zinc-50 truncate">{b.title}</h4>
                       <span className="text-[10px] text-zinc-440 font-mono block mt-0.5 uppercase tracking-wide font-semibold">{item.format.toUpperCase()} Padrão</span>
                     </div>
                   </div>
-                  {item.downloaded ? (
-                    <CheckCircle className="h-5 w-5 text-emerald-500 flex-shrink-0" />
-                  ) : (
-                    <button
-                      onClick={() => activeDownloads(b.id)}
-                      disabled={downloadingBookId === b.id}
-                      className="rounded-xl p-1.5 border hover:bg-zinc-50 flex-shrink-0 text-zinc-400 hover:text-blue-600 dark:border-zinc-800"
-                    >
-                      <Download className="h-4 w-4" />
-                    </button>
-                  )}
+
                 </div>
 
                 {/* Progress Indicators */}
@@ -307,99 +332,44 @@ export default function DigitalLibrary() {
             const readerBook = books.find((x) => x.id === readerBookId);
             const totalPages = readerBook?.pages || 350;
             return (
-              <div className="flex flex-col h-full justify-between" id="virtual-epub-reader-body">
-                {/* Control bar */}
+              <div className="flex flex-col h-full justify-between select-none" id="virtual-epub-reader-body" onContextMenu={(e) => e.preventDefault()}>
+                {/* Top Reader Actions */}
                 <div className="flex items-center justify-between border-b pb-3 gap-4 mb-4 text-xs font-mono font-bold text-zinc-500">
-                  <div className="flex items-center gap-1.5 bg-zinc-100 p-1 rounded-lg dark:bg-zinc-800">
-                    <button
-                      type="button"
-                      onClick={() => setFontSize('sm')}
-                      className={`px-2 py-1.5 rounded ${fontSize === 'sm' ? 'bg-white text-zinc-900 shadow-sm' : 'hover:bg-white/40'}`}
-                    >
-                      A-
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFontSize('base')}
-                      className={`px-2 py-1.5 rounded ${fontSize === 'base' ? 'bg-white text-zinc-909 shadow-sm' : 'hover:bg-white/40'}`}
-                    >
-                      Padrão A
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFontSize('lg')}
-                      className={`px-2 py-1.5 rounded ${fontSize === 'lg' ? 'bg-white text-zinc-900 shadow-sm' : 'hover:bg-white/40'}`}
-                    >
-                      A+
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFontSize('xl')}
-                      className={`px-2 py-1.5 rounded ${fontSize === 'xl' ? 'bg-white text-zinc-900 shadow-sm' : 'hover:bg-white/40'}`}
-                    >
-                      A++
-                    </button>
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="h-4 w-4" />
+                    <span>Livraria Mulemba • Leitor Digital</span>
                   </div>
                   <div>
-                    Página <span className="text-blue-600">{readerCurrentPage}</span> de {totalPages}
+                    <span className="text-blue-600">Visualização Interativa</span>
                   </div>
                 </div>
 
                 {/* Reader passage panel */}
-                <div className={`flex-1 overflow-y-auto font-serif text-zinc-800 dark:text-zinc-200 p-4 max-w-2xl mx-auto space-y-4 antialiased leading-relaxed ${fontSizes[fontSize]}`}>
-                  <p className="font-sans font-bold text-xs uppercase text-zinc-400 tracking-widest text-center border-b pb-1">
-                    Livraria Mulemba • Leitor Interativo Virtual de E-books
-                  </p>
-                  
-                  {/* render dummy passages depending on even or odd pages */}
-                  {readerCurrentPage % 2 === 1 ? (
-                    <>
-                      <h3 className="font-sans text-xl font-bold tracking-tight text-zinc-900 dark:text-white pt-2">Capítulo {Math.ceil(readerCurrentPage / 30)}: Alinhamento de Contexto</h3>
-                      <p className="indent-8">
-                        Os parâmetros neurais se alinharam perfeitamente. Era, afinal, a sequência que Raymond Vance previra durante a fase de análise dos manuais de criptologia. Os blocos de memória mantinham partições uniformes de pacotes criptografados.
-                      </p>
-                      <p>
-                        "Deixe as redes neurais convergirem", comentou Arthur, pressionando as teclas do terminal. A tela piscou em verde e uma série de modelos matemáticos se projetou pela tela, revelando as camadas modulares se combinando de forma harmônica.
-                      </p>
-                      <p>
-                        Ele percebeu que a resiliência cognitiva não consistia apenas em rotinas puramente biológicas. Era sobre a construção cuidadosa de metas intelectuais pacíficas dispostas a catalisar pensamentos brilhantes.
-                      </p>
-                    </>
+                <div className={`flex-1 w-full h-full relative`}>
+                  {readerBook?.ebookFileUrl ? (
+                    <iframe 
+                      src={`${readerBook.ebookFileUrl}#toolbar=0`} 
+                      className="w-full h-full border-0 rounded-lg shadow-sm bg-zinc-100 dark:bg-zinc-900" 
+                      title={`E-book: ${readerBook.title}`} 
+                    />
                   ) : (
-                    <>
-                      <h3 className="font-sans text-xl font-bold tracking-tight text-zinc-900 pt-2 dark:text-white">Capítulo {Math.ceil(readerCurrentPage / 30)}: A Expansão Macroeconômica</h3>
-                      <p className="indent-8">
-                        As automações de índices representavam parâmetros singulares de crescimento contínuo. Ao concentrar a alocação de fundos em índices de menor escala, o portfólio mantinha estruturas de proteção otimizadas para contrariar oscilações inflacionárias de curto prazo.
-                      </p>
-                      <p>
-                        Marcus Sterling Jr. ajustou as métricas em seu livro-razão pessoal. Os números progrediam de forma sustentável, imunes às instabilidades do mercado global, garantindo que os vetores de crescimento continuassem equilibrando os riscos de forma perfeitamente autônoma.
-                      </p>
-                      <p>
-                        "O mecanismo permanece em perfeita estabilidade", documentou ele com satisfação. Os algoritmos eram simples, sólidos e prontos para embasar as novas diretrizes recomendadas.
-                      </p>
-                    </>
+                    <div className={`flex flex-col items-center justify-center h-full text-center space-y-4 p-6`}>
+                      <div className="rounded-full bg-zinc-100 p-4 dark:bg-zinc-800">
+                        <BookOpen className="h-8 w-8 text-zinc-400" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-50">Ficheiro Indisponível</h3>
+                        <p className="text-sm text-zinc-500 mt-1 max-w-sm">
+                          O ficheiro digital (PDF/ePUB) deste livro não foi encontrado ou ainda não foi importado pelo vendedor.
+                        </p>
+                      </div>
+                    </div>
                   )}
                 </div>
 
-                {/* Footer pagers */}
-                <div className="flex items-center justify-between border-t pt-4 mt-6">
-                  <button
-                    onClick={() => handleReaderPageChange(-1, totalPages)}
-                    disabled={readerCurrentPage === 1}
-                    className="rounded-xl border border-zinc-250 py-2 px-4 text-xs font-bold text-zinc-700 bg-white dark:border-zinc-810 dark:bg-zinc-900 dark:text-zinc-350 hover:bg-zinc-50 disabled:opacity-40"
-                  >
-                    Página Anterior
-                  </button>
-                  <span className="text-xs font-mono font-bold text-zinc-550">
-                    Progresso: {Math.round((readerCurrentPage / totalPages) * 100)}%
-                  </span>
-                  <button
-                    onClick={() => handleReaderPageChange(1, totalPages)}
-                    disabled={readerCurrentPage === totalPages}
-                    className="rounded-xl border border-zinc-250 py-2 px-4 text-xs font-bold text-zinc-705 bg-white dark:border-zinc-801 dark:bg-zinc-900 dark:text-zinc-300 hover:bg-zinc-50 disabled:opacity-40"
-                  >
-                    Próxima Página
-                  </button>
+                {/* Footer notes */}
+                <div className="flex items-center justify-center border-t pt-4 mt-6 text-[10px] text-zinc-400 font-mono text-center">
+                  O progresso e anotações são gerenciados automaticamente pelo visor do documento.
                 </div>
               </div>
             );

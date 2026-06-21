@@ -53,14 +53,18 @@ export default function Dashboard() {
   const [isAddBookOpen, setIsAddBookOpen] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newAuthorName, setNewAuthorName] = useState('');
-  const [newCategoryId, setNewCategoryId] = useState('cat-1');
-  const [newPrice, setNewPrice] = useState(12500);
+  const [newCategoryId, setNewCategoryId] = useState('');
+  const [newPrice, setNewPrice] = useState<number | ''>('');
   const [newDescription, setNewDescription] = useState('');
   const [newStock, setNewStock] = useState(5);
-  const [newBookType, setNewBookType] = useState<'physical' | 'digital' | 'both'>('physical');
+  const [newPages, setNewPages] = useState(200);
   const [newIsbn, setNewIsbn] = useState('');
-  const [newCondition, setNewCondition] = useState<'new' | 'used_like_new' | 'used_very_good' | 'used_good' | 'used_acceptable'>('used_very_good');
+  const [newCondition, setNewCondition] = useState<'new' | 'used_like_new' | 'used_very_good' | 'used_good' | 'used_acceptable'>('new');
   const [newConditionNotes, setNewConditionNotes] = useState('');
+  const [newCoverFile, setNewCoverFile] = useState<File | null>(null);
+  const [newEbookFile, setNewEbookFile] = useState<File | null>(null);
+  const [newShippingCost, setNewShippingCost] = useState<number | ''>('');
+  const [newBookType, setNewBookType] = useState<'physical' | 'digital' | 'both'>('physical');
 
   // Handle default tab routing states (e.g. redirected from cart/checkout)
   useEffect(() => {
@@ -89,7 +93,7 @@ export default function Dashboard() {
     showToast('Suas preferências de perfil foram atualizadas com sucesso!', 'success');
   };
 
-  const handleAddBookSubmit = (e: React.FormEvent) => {
+  const handleAddBookSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle.trim() || !newAuthorName.trim() || !newDescription.trim()) {
       showToast('Por favor, preencha o título, o autor e uma descrição detalhada da obra.', 'warning');
@@ -112,19 +116,35 @@ export default function Dashboard() {
       'from-emerald-700 via-green-800 to-teal-950'
     ];
     const pickedColor = coverColors[Math.floor(Math.random() * coverColors.length)];
+    
+    let coverImageUrl = 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=450&auto=format&fit=crop&q=80';
+    let ebookFileUrl = '';
+    
+    try {
+      const { bookService } = await import('../services/bookService');
+      if (newCoverFile) {
+        coverImageUrl = await bookService.uploadFile(newCoverFile);
+      }
+      if (newEbookFile && newBookType !== 'physical') {
+        ebookFileUrl = await bookService.uploadFile(newEbookFile);
+      }
+    } catch (err) {
+      showToast('Erro ao processar arquivos. Usando capa padrão.', 'warning');
+    }
 
     const bookData: any = {
       title: newTitle,
-      authorId: 'aut-custom', // Assigned to a custom placeholder author
+      authorId: newAuthorName,
       categoryId: newCategoryId,
       description: newDescription,
-      price: Number(newPrice),
-      coverColor: pickedColor,
-      coverImage: 'https://images.unsplash.com/photo-1544947950-fa07a98d237f?w=450&auto=format&fit=crop&q=80',
+      price: newPrice === '' ? 0 : Number(newPrice),
+      coverImage: coverImageUrl,
+      ebookFileUrl: ebookFileUrl,
+      coverColor: 'from-blue-600 to-indigo-805',
       type: newBookType,
       formats: newBookType === 'both' ? ['physical', 'pdf', 'epub'] : newBookType === 'physical' ? ['physical'] : ['pdf', 'epub'],
       stock: newBookType === 'digital' ? 999 : Number(newStock),
-      pages: 250,
+      pages: newPages,
       publishedDate: new Date().toISOString().split('T')[0],
       isbn: newIsbn || 'N/A',
       publisher: resolvedPublisher,
@@ -133,25 +153,33 @@ export default function Dashboard() {
       sellerId: user?.id,
       sellerType: user?.userType,
       sellerName: user?.userType === 'reader' ? user.name : (user?.companyName || user?.name),
-      condition: user?.userType === 'reader' ? newCondition : 'new',
-      conditionNotes: user?.userType === 'reader' ? newConditionNotes : undefined,
+      condition: newCondition,
+      conditionNotes: newCondition !== 'new' ? newConditionNotes : undefined,
+      shippingCost: (newBookType !== 'digital' && newShippingCost !== '') ? Number(newShippingCost) : undefined,
       city: user?.city,
       state: user?.state,
       whatsapp: user?.whatsapp || user?.phone,
     };
 
-    addBook(bookData);
-    showToast(`O livro "${newTitle}" foi anunciado com sucesso no catálogo!`, 'success');
-    
-    // Reset Form fields
-    setNewTitle('');
-    setNewAuthorName('');
-    setNewDescription('');
-    setNewPrice(12500);
-    setNewStock(5);
-    setNewIsbn('');
-    setNewConditionNotes('');
-    setIsAddBookOpen(false);
+    try {
+      await addBook(bookData);
+      showToast(`O livro "${newTitle}" foi anunciado com sucesso no catálogo!`, 'success');
+      
+      // Reset Form fields
+      setNewTitle('');
+      setNewAuthorName('');
+      setNewDescription('');
+      setNewPrice('');
+      setNewStock(5);
+      setNewShippingCost('');
+      setNewIsbn('');
+      setNewConditionNotes('');
+      setNewCoverFile(null);
+      setNewEbookFile(null);
+      setIsAddBookOpen(false);
+    } catch (err) {
+      showToast('Ocorreu um erro ao anunciar o livro. Verifique suas permissões.', 'error');
+    }
   };
 
   const handleRemoveSellerBook = (id: string, name: string) => {
@@ -201,7 +229,7 @@ export default function Dashboard() {
       case 'bookstore': return '📚 Livraria Oficial';
       case 'publisher': return '🏢 Editora Parceira';
       case 'author': return '✍️ Autor Independente';
-      default: return '👤 Leitor / Vendedor de Usados';
+      default: return '👤 Leitor';
     }
   };
 
@@ -265,6 +293,19 @@ export default function Dashboard() {
             )}
             <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" /> Desde: {user?.memberSince}</span>
           </div>
+          
+          <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 mt-3">
+             <div className="bg-zinc-800 rounded-lg px-3 py-1.5 text-center border border-zinc-700">
+                <span className="block text-[10px] text-zinc-400 uppercase tracking-wider font-bold font-mono">No Catálogo Geral</span>
+                <span className="block text-sm font-black text-blue-400">{books.length}</span>
+             </div>
+             {user?.userType !== 'reader' && (
+               <div className="bg-zinc-800 rounded-lg px-3 py-1.5 text-center border border-zinc-700">
+                  <span className="block text-[10px] text-zinc-400 uppercase tracking-wider font-bold font-mono">Meus Livros Cadastrados</span>
+                  <span className="block text-sm font-black text-amber-400">{myListedBooks.length}</span>
+               </div>
+             )}
+          </div>
         </div>
       </div>
 
@@ -276,7 +317,8 @@ export default function Dashboard() {
           { id: 'orders', label: 'Histórico de pedidos', icon: ShoppingBag },
           { id: 'wishlist', label: 'Minhas curtidas', icon: Heart },
           { id: 'library', label: 'E-books salvos', icon: Library },
-        ].map((tab) => {
+        ].filter(tab => !(tab.id === 'seller-portal' && user?.userType === 'reader'))
+         .map((tab) => {
           const TabIcon = tab.icon;
           return (
             <button
@@ -454,8 +496,10 @@ export default function Dashboard() {
                     <select
                       value={newCategoryId}
                       onChange={(e) => setNewCategoryId(e.target.value)}
+                      required
                       className="w-full rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-xs text-zinc-900 outline-none focus:border-blue-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
                     >
+                      <option value="" disabled>Selecione uma categoria</option>
                       {categories.map((cat) => (
                         <option key={cat.id} value={cat.id}>{cat.name}</option>
                       ))}
@@ -475,32 +519,30 @@ export default function Dashboard() {
                     />
                   </div>
 
-                  {user?.userType !== 'reader' ? (
-                    <div>
-                      <label className="text-[10px] text-zinc-400 font-bold font-mono uppercase block mb-1">Estoque Inicial (Físico)</label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={newStock}
-                        onChange={(e) => setNewStock(Number(e.target.value))}
-                        className="w-full rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-xs text-zinc-900 outline-none focus:border-blue-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 font-mono"
-                      />
-                    </div>
-                  ) : (
-                    <div>
-                      <label className="text-[10px] text-zinc-400 font-bold font-mono uppercase block mb-1">Estado de Conservação *</label>
-                      <select
-                        value={newCondition}
-                        onChange={(e) => setNewCondition(e.target.value as any)}
-                        className="w-full rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-xs text-zinc-900 outline-none focus:border-blue-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
-                      >
-                        <option value="used_like_new">Usado - Como Novo</option>
-                        <option value="used_very_good">Usado - Muito Bom</option>
-                        <option value="used_good">Usado - Bom Estado</option>
-                        <option value="used_acceptable">Usado - Aceitável</option>
-                      </select>
-                    </div>
-                  )}
+                  <div>
+                    <label className="text-[10px] text-zinc-400 font-bold font-mono uppercase block mb-1">Estoque Inicial (Físico)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={newStock}
+                      onChange={(e) => setNewStock(Number(e.target.value))}
+                      className="w-full rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-xs text-zinc-900 outline-none focus:border-blue-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-zinc-400 font-bold font-mono uppercase block mb-1">Estado de Conservação *</label>
+                    <select
+                      value={newCondition}
+                      onChange={(e) => setNewCondition(e.target.value as any)}
+                      className="w-full rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-xs text-zinc-900 outline-none focus:border-blue-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
+                    >
+                      <option value="new">Novo (Direto da Editora/Autor/Livraria)</option>
+                      <option value="used_like_new">Usado - Como Novo</option>
+                      <option value="used_very_good">Usado - Muito Bom</option>
+                      <option value="used_good">Usado - Bom Estado</option>
+                      <option value="used_acceptable">Usado - Aceitável</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -512,6 +554,22 @@ export default function Dashboard() {
                       onChange={(e) => setNewIsbn(e.target.value)}
                       placeholder="978-85-..."
                       className="w-full rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-xs text-zinc-900 outline-none focus:border-blue-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] text-zinc-400 font-bold font-mono uppercase block mb-1">Capa do Livro (opcional)</label>
+                    <input
+                      type="file"
+                      accept=".png,.jpg,.jpeg"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files.length > 0) {
+                          setNewCoverFile(e.target.files[0]);
+                        } else {
+                          setNewCoverFile(null);
+                        }
+                      }}
+                      className="w-full rounded-xl border border-zinc-200 bg-white px-3.5 py-[5px] text-xs text-zinc-500 file:mr-3 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-[10px] file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:border-zinc-800 dark:bg-zinc-950 dark:file:bg-zinc-800 dark:file:text-zinc-300"
                     />
                   </div>
 
@@ -529,7 +587,27 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {user?.userType === 'reader' && (
+                {newBookType !== 'physical' && (
+                  <div>
+                    <label className="text-[10px] text-zinc-400 font-bold font-mono uppercase block mb-1">Ficheiro do Livro Digital (PDF ou ePUB) *</label>
+                    <input
+                      type="file"
+                      accept=".pdf,.epub"
+                      required
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files.length > 0) {
+                          setNewEbookFile(e.target.files[0]);
+                        } else {
+                          setNewEbookFile(null);
+                        }
+                      }}
+                      className="w-full rounded-xl border border-zinc-200 bg-white px-3.5 py-[5px] text-xs text-zinc-500 file:mr-3 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-[10px] file:font-semibold file:bg-rose-50 file:text-rose-700 hover:file:bg-rose-100 dark:border-zinc-800 dark:bg-zinc-950 dark:file:bg-zinc-800 dark:file:text-zinc-300"
+                    />
+                    <p className="text-[9px] text-zinc-400 mt-1">Este ficheiro será protegido contra downloads e ecrãs na plataforma.</p>
+                  </div>
+                )}
+
+                {newCondition !== 'new' && (
                   <div>
                     <label className="text-[10px] text-zinc-400 font-bold font-mono uppercase block mb-1">Detalhes de Uso e Marcas (Importante para Usados) *</label>
                     <input
@@ -539,6 +617,20 @@ export default function Dashboard() {
                       onChange={(e) => setNewConditionNotes(e.target.value)}
                       placeholder="Ex: Lombada intacta, sem grifos, amarelado nas bordas das páginas."
                       className="w-full rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-xs text-zinc-900 outline-none focus:border-blue-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
+                    />
+                  </div>
+                )}
+
+                {newBookType !== 'digital' && (
+                  <div>
+                    <label className="text-[10px] text-zinc-400 font-bold font-mono uppercase block mb-1">Custo do Frete (opcional)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={newShippingCost}
+                      onChange={(e) => setNewShippingCost(e.target.value === '' ? '' : Number(e.target.value))}
+                      placeholder="Deixe vazio se for Grátis ou a combinar"
+                      className="w-full rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-xs text-zinc-900 outline-none focus:border-blue-500 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 font-mono"
                     />
                   </div>
                 )}
@@ -684,14 +776,33 @@ export default function Dashboard() {
                         {ord.discount > 0 && <span className="text-emerald-500">Desconto: -Kz {ord.discount.toLocaleString('pt-AO')}</span>}
                         <span>Frete: Kz {ord.shippingCharge.toLocaleString('pt-AO')}</span>
                       </div>
-                      {ord.trackingNumber && (
-                        <p className="text-xs text-zinc-500">
-                          Rastreio: <span className="font-semibold text-zinc-700 dark:text-zinc-300 font-mono">{ord.trackingNumber}</span>
-                        </p>
-                      )}
-                      <div className="sm:text-right w-full sm:w-auto mt-2 sm:mt-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-zinc-100 dark:border-zinc-800">
-                        <span className="text-[10px] text-zinc-403 uppercase tracking-wider block font-mono">Total Pago</span>
-                        <p className="font-black text-sm text-zinc-900 dark:text-zinc-50 font-mono mt-0.5">Kz {ord.total.toLocaleString('pt-AO')}</p>
+                      
+                      <div className="flex flex-col gap-1 items-start sm:items-center">
+                        {ord.trackingNumber && (
+                          <p className="text-xs text-zinc-500">
+                            Rastreio: <span className="font-semibold text-zinc-700 dark:text-zinc-300 font-mono">{ord.trackingNumber}</span>
+                          </p>
+                        )}
+                        {ord.items.some((it) => it.selectedFormat === 'physical') && (
+                          <span className="text-[10px] bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-900/40 font-semibold font-mono">
+                            Previsão de Entrega: 5 a 7 dias úteis
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-4">
+                        {ord.status === 'shipped' && ord.items.some((it) => it.selectedFormat === 'physical') && (
+                          <button
+                            onClick={() => showToast('Recebimento do livro confirmado com sucesso!', 'success')}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg shadow-sm transition uppercase tracking-wider"
+                          >
+                            Confirmar Recebimento
+                          </button>
+                        )}
+                        <div className="sm:text-right w-full sm:w-auto mt-2 sm:mt-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-zinc-100 dark:border-zinc-800">
+                          <span className="text-[10px] text-zinc-403 uppercase tracking-wider block font-mono">Total Pago</span>
+                          <p className="font-black text-sm text-zinc-900 dark:text-zinc-50 font-mono mt-0.5">Kz {ord.total.toLocaleString('pt-AO')}</p>
+                        </div>
                       </div>
                     </div>
                   </div>

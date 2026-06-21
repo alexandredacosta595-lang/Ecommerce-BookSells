@@ -4,6 +4,7 @@ import { useBookStore } from '../store/useBookStore';
 import { useCartStore } from '../store/useCartStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { useNotificationStore } from '../store/useNotificationStore';
+import { PixelService } from '../services/PixelService';
 import RatingComponent from '../components/RatingComponent';
 import BookCard from '../components/BookCard';
 import ModalComponent from '../components/ModalComponent';
@@ -73,6 +74,15 @@ export default function BookDetails() {
 
   const handleAddToCart = () => {
     addItem(book, selectedFormat);
+    
+    // TRACK PIXEL
+    PixelService.track('add_to_cart', {
+      bookId: book.id,
+      title: book.title,
+      price: book.price,
+      format: selectedFormat
+    });
+
     showToast(`"${book.title}" [${selectedFormat.toUpperCase()}] adicionado ao carrinho!`, 'success');
   };
 
@@ -150,21 +160,25 @@ export default function BookDetails() {
             <div className="absolute top-0 bottom-0 left-4.5 w-0.5 bg-white/5 z-10" />
 
             {/* Title / Author */}
-            <div className="relative z-10 p-8 flex flex-col justify-between h-full w-full text-center">
-              <span className="text-xs font-mono text-zinc-300 uppercase self-center tracking-widest leading-none">
-                {author?.name || 'Editora Mulemba'}
-              </span>
-              <div className="flex flex-col gap-2.5 items-center my-auto px-2">
-                <span className="font-serif font-black text-xl sm:text-2xl leading-tight">
-                  {book.title}
+            {book.coverImage ? (
+              <img src={book.coverImage} alt={book.title} className="absolute inset-0 h-full w-full object-cover z-0" />
+            ) : (
+              <div className="relative z-10 p-8 flex flex-col justify-between h-full w-full text-center">
+                <span className="text-xs font-mono text-zinc-300 uppercase self-center tracking-widest leading-none">
+                  {author?.name || book.authorId || 'Editora Mulemba'}
                 </span>
-                <span className="h-1 w-12 bg-amber-400 rounded-full" />
-                <span className="text-xs text-zinc-300 italic">Edição Curada</span>
+                <div className="flex flex-col gap-2.5 items-center my-auto px-2">
+                  <span className="font-serif font-black text-xl sm:text-2xl leading-tight">
+                    {book.title}
+                  </span>
+                  <span className="h-1 w-12 bg-amber-400 rounded-full" />
+                  <span className="text-xs text-zinc-300 italic">Edição Curada</span>
+                </div>
+                <span className="text-xs font-mono text-zinc-400 self-center">
+                  ISBN: {book.isbn || '978-MULEMBA-AO'}
+                </span>
               </div>
-              <span className="text-xs font-mono text-zinc-400 self-center">
-                ISBN: {book.isbn || '978-MULEMBA-AO'}
-              </span>
-            </div>
+            )}
           </div>
 
           <button
@@ -185,7 +199,7 @@ export default function BookDetails() {
               {book.title}
             </h1>
             <p className="text-sm text-zinc-550 dark:text-zinc-400">
-              por <span className="font-semibold text-blue-650 dark:text-blue-400">{author?.name}</span>
+              por <span className="font-semibold text-blue-650 dark:text-blue-400">{author?.name || book.authorId}</span>
             </p>
             <div className="flex items-center gap-1.5 pt-1">
               <RatingComponent rating={book.rating} size="sm" reviewsCount={bookReviews.length} />
@@ -250,21 +264,30 @@ export default function BookDetails() {
 
           {/* Checkout controls buttons */}
           <div className="flex flex-col sm:flex-row gap-4 pt-2">
-            <button
-              onClick={handleAddToCart}
-              className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 py-3.5 text-sm font-bold text-white shadow-md cursor-pointer transition"
-            >
-              <ShoppingCart className="h-4.5 w-4.5" /> Adicionar ao Carrinho
-            </button>
-            <button
-              onClick={handleBuyNow}
-              className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-amber-500 hover:bg-amber-400 py-3.5 text-sm font-bold text-black shadow-md cursor-pointer transition"
-            >
-              Comprar Agora
-            </button>
+            {book.sellerId === user?.id ? (
+               <div className="flex-1 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 rounded-xl py-3.5 px-4 text-center">
+                 <span className="block text-amber-800 dark:text-amber-400 font-bold text-sm">Este é o seu próprio anúncio.</span>
+                 <span className="block text-amber-700 dark:text-amber-500 text-xs mt-0.5 font-mono">Não é possível efetuar a compra de um item que você cadastrou.</span>
+               </div>
+            ) : (
+              <>
+                <button
+                  onClick={handleAddToCart}
+                  className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 py-3.5 text-sm font-bold text-white shadow-md cursor-pointer transition"
+                >
+                  <ShoppingCart className="h-4.5 w-4.5" /> Adicionar ao Carrinho
+                </button>
+                <button
+                  onClick={handleBuyNow}
+                  className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-amber-500 hover:bg-amber-400 py-3.5 text-sm font-bold text-black shadow-md cursor-pointer transition"
+                >
+                  Comprar Agora
+                </button>
+              </>
+            )}
             <button
               onClick={handleWishlist}
-              className={`rounded-xl border p-3.5 transition ${
+              className={`rounded-xl border p-3.5 transition shrink-0 ${
                 isFav
                   ? 'border-rose-100 bg-rose-50 text-rose-600 dark:bg-rose-950/20 dark:border-rose-900'
                   : 'border-zinc-250 hover:bg-zinc-50 dark:border-zinc-800'
@@ -360,13 +383,13 @@ export default function BookDetails() {
           <div className="flex items-center gap-3.5 pb-3 border-b border-zinc-100 dark:border-zinc-800">
             <img
               src={author?.avatar}
-              alt={author?.name}
+              alt={author?.name || book.authorId}
               className="h-12 w-12 rounded-full object-cover border"
               referrerPolicy="no-referrer"
             />
             <div>
-              <h4 className="font-bold text-sm text-zinc-909 dark:text-zinc-105">{author?.name}</h4>
-              <p className="text-xs text-zinc-440 font-mono mt-0.5">{author?.booksCount} Obras Publicadas</p>
+              <h4 className="font-bold text-sm text-zinc-909 dark:text-zinc-105">{author?.name || book.authorId}</h4>
+              <p className="text-xs text-zinc-440 font-mono mt-0.5">{author?.booksCount || 1} Obras Publicadas</p>
             </div>
           </div>
           <p className="text-xs text-zinc-505 leading-relaxed">
