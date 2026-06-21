@@ -115,7 +115,7 @@ export default function Navbar() {
                 >
                   Minha Conta
                 </Link>
-                {user?.role === 'admin' && (
+                {(user?.role === 'admin' || user?.role === 'seller') && (
                   <Link
                     to="/admin"
                     className={`rounded-xl px-3.5 py-2 text-sm font-semibold transition-colors flex items-center gap-1.5 ${
@@ -124,7 +124,7 @@ export default function Navbar() {
                         : 'text-zinc-650 hover:bg-zinc-50 hover:text-zinc-900 dark:text-zinc-350 dark:hover:bg-zinc-800 dark:hover:text-zinc-100'
                     }`}
                   >
-                    <Settings className="h-4 w-4 text-emerald-500" /> Admin
+                    <Settings className="h-4 w-4 text-emerald-500" /> {user?.role === 'admin' ? 'Admin' : 'Painel de Vendas'}
                   </Link>
                 )}
               </>
@@ -194,12 +194,12 @@ export default function Navbar() {
                       <p className="text-xs text-zinc-500 truncate mt-0.5">{user?.email}</p>
                       <div className="mt-2.5 flex items-center gap-1">
                         <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold tracking-wider uppercase font-mono ${
-                          user?.role === 'admin'
+                          user?.role === 'admin' || user?.role === 'seller'
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-250 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900/40'
                             : 'bg-blue-50 text-blue-700 border border-blue-250 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-900/40'
                         }`}>
                           {user?.role === 'admin' ? <ShieldCheck className="h-2.5 w-2.5" /> : <UserCheck className="h-2.5 w-2.5" />}
-                          Modo: {user?.role === 'admin' ? 'Administrador' : 'Leitor'}
+                          Modo: {user?.role === 'admin' ? 'Administrador' : user?.role === 'seller' ? 'Vendedor' : 'Leitor'}
                         </span>
                       </div>
                     </div>
@@ -220,13 +220,13 @@ export default function Navbar() {
                       <Library className="h-4 w-4" /> Minha Biblioteca
                     </Link>
 
-                    {user?.role === 'admin' && (
+                    {(user?.role === 'admin' || user?.role === 'seller') && (
                       <Link
                         to="/admin"
                         onClick={() => setIsProfileDropdownOpen(false)}
                         className="flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-semibold text-emerald-600 hover:bg-zinc-50 dark:text-emerald-450 dark:hover:bg-zinc-850"
                       >
-                        <Settings className="h-4 w-4" /> Console Administrativa
+                        <Settings className="h-4 w-4" /> {user?.role === 'admin' ? 'Console Administrativa' : 'Meu Painel de Vendas'}
                       </Link>
                     )}
 
@@ -310,14 +310,14 @@ export default function Navbar() {
                 >
                   Minha Conta
                 </button>
-                {user?.role === 'admin' && (
+                {(user?.role === 'admin' || user?.role === 'seller') && (
                   <button
                     onClick={() => handleNavigationAndClose('/admin')}
                     className={`rounded-xl px-4 py-3 text-left text-base font-semibold flex items-center gap-2 ${
                       isActive('/admin') ? 'bg-blue-50 text-blue-650 dark:bg-zinc-800' : 'text-zinc-650 dark:text-zinc-300'
                     }`}
                   >
-                    <Settings className="h-5 w-5 text-emerald-500 animate-spin-slow" /> Console Admin
+                    <Settings className="h-5 w-5 text-emerald-500 animate-spin-slow" /> {user?.role === 'admin' ? 'Console Admin' : 'Painel de Vendas'}
                   </button>
                 )}
                 <div className="border-t border-zinc-100 dark:border-zinc-800 my-4 pt-4">

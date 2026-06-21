@@ -60,6 +60,8 @@ export default function RegisterPage() {
         ? `Livraria "${companyName || name}" cadastrada com sucesso!`
         : userType === 'publisher'
         ? `Ecossistema de Editora criado para "${companyName || name}"!`
+        : userType === 'reader_seller'
+        ? `Perfil de Leitor Vendedor criado para "${name}"! Já pode ler e publicar os seus livros.`
         : `Perfil de Autor criado para "${name}"!`;
 
       showToast(successMessage, 'success');
@@ -168,6 +170,19 @@ export default function RegisterPage() {
                   <BookHeart className="h-5 w-5 mb-1.5 text-blue-500" />
                   <span className="text-xs font-bold block">Autor Independente</span>
                   <span className="text-[9px] text-zinc-400 font-mono mt-0.5 leading-tight font-medium">Publique sem intermediários</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUserType('reader_seller')}
+                  className={`flex flex-col items-start p-3 rounded-xl border text-left cursor-pointer transition-all ${
+                    userType === 'reader_seller'
+                      ? 'border-blue-600 bg-blue-50/20 text-blue-600 dark:border-blue-500'
+                      : 'border-zinc-200 hover:border-zinc-300 text-zinc-650 bg-white dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300'
+                  }`}
+                >
+                  <Store className="h-5 w-5 mb-1.5 text-blue-500" />
+                  <span className="text-xs font-bold block">Leitor Vendedor</span>
+                  <span className="text-[9px] text-zinc-400 font-mono mt-0.5 leading-tight font-medium">Leia e venda seus livros usados</span>
                 </button>
               </div>
             </div>

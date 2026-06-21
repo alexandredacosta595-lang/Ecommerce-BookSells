@@ -1,4 +1,4 @@
-export type UserType = 'reader' | 'bookstore' | 'publisher' | 'author';
+export type UserType = 'reader' | 'bookstore' | 'publisher' | 'author' | 'reader_seller';
 
 export interface Book {
   id: string;
@@ -53,7 +53,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'user' | 'admin';
+  role: 'user' | 'admin' | 'seller';
   avatar?: string;
   memberSince: string;
   bio?: string;

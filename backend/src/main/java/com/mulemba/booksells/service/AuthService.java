@@ -129,6 +129,7 @@ public class AuthService {
             case BOOKSTORE -> "Livraria especializada trazendo títulos selecionados de " + (city != null ? city : "nossa sede") + ".";
             case PUBLISHER -> "Editora literária comprometida com a curadoria de títulos extraordinários.";
             case AUTHOR -> "Autor independente publicando obras originais directamente aos leitores.";
+            case READER_SELLER -> "Leitor e vendedor partilhando a sua colecção de livros físicos e digitais com a comunidade.";
         };
     }
 }

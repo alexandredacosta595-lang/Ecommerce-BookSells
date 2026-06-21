@@ -21,12 +21,15 @@ public record UserResponse(
 ) {
     public static UserResponse from(com.mulemba.booksells.model.User user) {
         boolean isAdmin = user.getRoles().stream().anyMatch(r -> r.getName().equals("ROLE_ADMIN"));
+        boolean isSeller = user.getRoles().stream().anyMatch(r -> r.getName().equals("ROLE_SELLER"));
+        
+        String roleStr = isAdmin ? "admin" : (isSeller ? "seller" : "user");
         
         return new UserResponse(
                 user.getId(),
                 user.getName(),
                 user.getEmail(),
-                isAdmin ? "admin" : "user",
+                roleStr,
                 user.getAvatar(),
                 user.getMemberSince().toString(),
                 user.getBio(),

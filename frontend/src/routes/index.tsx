@@ -36,10 +36,10 @@ export default function AppRoutes() {
         element={isAuthenticated ? <DigitalLibrary /> : <Navigate to="/login" replace />} 
       />
       
-      {/* Protected Admin Routes */}
+      {/* Protected Admin/Seller Routes */}
       <Route 
         path="/admin" 
-        element={isAuthenticated && user?.role === 'admin' ? <AdminDashboard /> : <Navigate to="/login" replace />} 
+        element={isAuthenticated && (user?.role === 'admin' || user?.role === 'seller') ? <AdminDashboard /> : <Navigate to="/login" replace />} 
       />
 
       {/* Fallback 404 handler */}

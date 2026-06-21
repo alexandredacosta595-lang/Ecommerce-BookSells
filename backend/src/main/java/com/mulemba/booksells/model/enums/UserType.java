@@ -6,7 +6,8 @@ public enum UserType {
     READER,
     BOOKSTORE,
     PUBLISHER,
-    AUTHOR;
+    AUTHOR,
+    READER_SELLER;
 
     @JsonCreator
     public static UserType from(String value) {
